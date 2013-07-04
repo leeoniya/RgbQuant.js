@@ -15,11 +15,11 @@
 		// # of highest-frequency colors to start with for palette reduction
 		this.initColors = opts.initColors || 4096;
 		// color-distance threshold for initial reduction pass
-		this.initDist = (opts.initDist || opts.initDist === 0) ? opts.initDist : .05;
+		this.initDist = opts.initDist || .05;
 		// subsequent passes threshold
 		this.distIncr = opts.distIncr || 0.02;
 		// palette grouping
-		this.hueGroups = opts.hueGroups || 8;
+		this.hueGroups = opts.hueGroups || 10;
 		// subregion partitioning box size
 		this.boxSize = opts.boxSize || [64,64];
 		// number of same pixels required within box for histogram inclusion
@@ -57,7 +57,7 @@
 	};
 
 	// image quantizer
-	RgbQuant.prototype.reduce = function(img, indexed) {
+	RgbQuant.prototype.reduce = function reduce(img, indexed) {
 		if (!this.palLocked)
 			this.buildPal();
 
