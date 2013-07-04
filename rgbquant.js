@@ -9,6 +9,7 @@
 	function RgbQuant(opts) {
 		opts = opts || {};
 
+		// 1 = by global population, 2 = subregion population threshold
 		this.method = opts.method || 1;
 		// desired final palette size
 		this.colors = opts.colors || 256;
