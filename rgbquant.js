@@ -10,7 +10,7 @@
 		opts = opts || {};
 
 		// 1 = by global population, 2 = subregion population threshold
-		this.method = opts.method || 1;
+		this.method = opts.method || 2;
 		// desired final palette size
 		this.colors = opts.colors || 256;
 		// # of highest-frequency colors to start with for palette reduction
