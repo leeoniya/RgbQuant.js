@@ -289,7 +289,7 @@
 	RgbQuant.prototype.nearestColor = function nearestColor(i32) {
 		var idx = this.nearestIndex(i32);
 		return this.idxi32[idx];
-	}
+	};
 
 	// TOTRY: use HUSL - http://boronine.com/husl/
 	RgbQuant.prototype.nearestIndex = function nearestIndex(i32) {
@@ -315,7 +315,7 @@
 		}
 
 		return idx;
-	}
+	};
 
 	// Rec. 709 (sRGB) luma coef
 	var Pr = .2126,
