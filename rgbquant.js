@@ -203,11 +203,10 @@
 			len = buf32.length;
 
 		for (var i = 0; i < len; i++) {
-			// skip transparent
-			if ((buf32[i] & 0xff000000) >> 24 == 0) continue;
-
-			// hack to retain stable order
 			col = buf32[i];
+
+			// skip transparent
+			if ((col & 0xff000000) >> 24 == 0) continue;
 
 			if (col in histG)
 				histG[col]++;
@@ -232,11 +231,10 @@
 				histL = {}, col;
 
 			iterBox(box, width, function(i) {
-				// skip transparent
-				if ((buf32[i] & 0xff000000) >> 24 == 0) return;
-
-				// hack to retain stable order
 				col = buf32[i];
+
+				// skip transparent
+				if ((col & 0xff000000) >> 24 == 0) return;
 
 				if (col in histG)
 					histG[col]++;
@@ -297,6 +295,7 @@
 		if (col) return this.i32idx[col];
 
 		var min = 1000,
+			idx,
 			idx,
 			rgb = [
 				(i32 & 0xff),
