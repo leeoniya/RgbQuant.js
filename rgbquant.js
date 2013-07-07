@@ -2,7 +2,7 @@
 * Copyright (c) 2013, Leon Sorokin
 * All rights reserved. (MIT Licensed)
 *
-* rgbquant.js - image color quantizer
+* RgbQuant.js - an image quantization lib
 */
 
 (function(){
@@ -21,6 +21,13 @@
 		this.distIncr = opts.distIncr || 0.02;
 		// palette grouping
 		this.hueGroups = opts.hueGroups || 10;
+		this.satGroups = opts.satGroups || 10;
+		this.lumGroups = opts.lumGroups || 10;
+		// if > 0, enables hues stats and min-color retention per group
+		this.minHueCols = opts.minHueCols || 0;
+		// HueStats instance
+		this.hueStats = this.minHueCols ? new HueStats(this.hueGroups, this.minHueCols) : null;
+
 		// subregion partitioning box size
 		this.boxSize = opts.boxSize || [64,64];
 		// number of same pixels required within box for histogram inclusion
@@ -77,6 +84,8 @@
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
 	RgbQuant.prototype.buildPal = function buildPal() {
+		if (this.palLocked) return;
+
 		var histG  = this.histogram,
 			sorted = sortedHashKeys(histG, true);
 
@@ -91,9 +100,15 @@
 
 				var idxi32 = sorted.slice(0, cols);
 
+				// add any cut off colors with same freq as last
 				var pos = cols, len = sorted.length;
 				while (pos < len && histG[sorted[pos]] == freq)
 					idxi32.push(sorted[pos++]);
+
+				// inject min huegroup colors
+				if (this.hueStats)
+					this.hueStats.inject(idxi32);
+
 				break;
 			case 2:
 				var idxi32 = sorted;
@@ -106,6 +121,11 @@
 		this.reducePal(idxi32);
 		this.sortPal();
 		this.palLocked = true;
+	};
+
+	RgbQuant.prototype.palette = function palette(tuples) {
+		this.buildPal();
+		return tuples ? this.idxrgb : new Uint8Array((new Uint32Array(this.idxi32)).buffer);
 	};
 
 	// reduces similar colors from an importance-sorted Uint32 rgba array
@@ -208,6 +228,10 @@
 			// skip transparent
 			if ((col & 0xff000000) >> 24 == 0) continue;
 
+			// collect hue stats
+			if (this.hueStats)
+				this.hueStats.check(col);
+
 			if (col in histG)
 				histG[col]++;
 			else
@@ -236,6 +260,10 @@
 				// skip transparent
 				if ((col & 0xff000000) >> 24 == 0) return;
 
+				// collect hue stats
+				if (self.hueStats)
+					self.hueStats.check(col);
+
 				if (col in histG)
 					histG[col]++;
 				else if (col in histL) {
@@ -246,6 +274,9 @@
 					histL[col] = 1;
 			});
 		});
+
+		if (this.hueStats)
+			this.hueStats.inject(histG);
 	};
 
 	// TODO: group very low lum and very high lum colors
@@ -314,6 +345,62 @@
 		}
 
 		return idx;
+	};
+
+	function HueStats(numGroups, minCols) {
+		this.numGroups = numGroups;
+		this.minCols = minCols;
+		this.stats = {};
+
+		for (var i = -1; i < numGroups; i++)
+			this.stats[i] = {num: 0, cols: []};
+
+		this.groupsFull = 0;
+	}
+
+	HueStats.prototype.check = function checkHue(i32) {
+		if (this.groupsFull == this.numGroups + 1)
+			this.check = function() {return;};
+
+		var r = (i32 & 0xff),
+			g = (i32 & 0xff00) >> 8,
+			b = (i32 & 0xff0000) >> 16,
+			hg = (r == g && g == b) ? -1 : hueGroup(rgb2hsl(r,g,b).h, this.numGroups),
+			gr = this.stats[hg],
+			min = this.minCols;
+
+		gr.num++;
+
+		if (gr.num > min)
+			return;
+		if (gr.num == min)
+			this.groupsFull++;
+
+		if (gr.num <= min)
+			this.stats[hg].cols.push(i32);
+	};
+
+	HueStats.prototype.inject = function injectHues(histG) {
+		for (var i = -1; i < this.numGroups; i++) {
+			if (this.stats[i].num <= this.minCols) {
+				switch (typeOf(histG)) {
+					case "Array":
+						this.stats[i].cols.forEach(function(col){
+							if (histG.indexOf(col) == -1)
+								histG.push(col);
+						});
+						break;
+					case "Object":
+						this.stats[i].cols.forEach(function(col){
+							if (!histG[col])
+								histG[col] = 1;
+							else
+								histG[col]++;
+						});
+						break;
+				}
+			}
+		}
 	};
 
 	// Rec. 709 (sRGB) luma coef
@@ -387,12 +474,10 @@
 
 	function satGroup(sat) {
 		return sat;
-		return Math.round(16 * sat);
 	}
 
 	function lumGroup(lum) {
 		return lum;
-		return Math.round(16 * lum);
 	}
 
 	function typeOf(val) {
