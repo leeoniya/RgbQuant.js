@@ -55,7 +55,7 @@ var outA = q.reduce(imgA),
 Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.
 
 **.reduce(image, retType)** - Quantizes an image.<br>
-`image` can be any of the types specified for `.sample()` above. `retType` param determines returned type. `1` - Uint8Array (default), `2` - Indexed array. Transparent pixels will result in a sparse indexed array.
+`image` can be any of the types specified for `.sample()` above. `retType` determines returned type. `1` - Uint8Array (default), `2` - Indexed array. Transparent pixels will result in a sparse indexed array.
 
 ---
 ### Caveats & Tips
