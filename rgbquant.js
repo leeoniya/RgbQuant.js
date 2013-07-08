@@ -65,21 +65,24 @@
 	};
 
 	// image quantizer
-	RgbQuant.prototype.reduce = function reduce(img, indexed) {
+	// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
+	RgbQuant.prototype.reduce = function reduce(img, retType) {
 		if (!this.palLocked)
 			this.buildPal();
+
+		retType = retType || 1;
 
 		var data = getImageData(img),
 			buf32 = data.buf32,
 			len = buf32.length,
-			out = indexed ? new Uint8Array(len) : new Uint32Array(len);
+			out = retType == 1 ? new Uint32Array(len) : retType == 2 ? new Array(len) : null;
 
 		for (var i = 0; i < len; i++) {
 			var i32 = buf32[i];
-			out[i] = indexed ? this.nearestIndex(i32) : this.nearestColor(i32);
+			out[i] = retType == 1 ? this.nearestColor(i32) : retType == 2 ? this.nearestIndex(i32) : null;
 		}
 
-		return indexed ? out : new Uint8Array(out.buffer);
+		return retType == 1 ? new Uint8Array(out.buffer) : retType == 2 ? out : null;
 	};
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
