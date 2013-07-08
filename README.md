@@ -48,11 +48,11 @@ var outA = q.reduce(imgA),
 ---
 ### Docs
 
-**.sample(image, width)** - Performs histogram analysis
+**.sample(image, width)** - Performs histogram analysis.<br>
 `image` may be any of *&lt;img&gt;*, *&lt;canvas&gt;*, *Context2D*, *ImageData*, *Typed Array*, *Array*. `width` is required if `image` is an array.
 
-**.palette(tuples)** - Retrieves the palette, building it on first call.
+**.palette(tuples)** - Retrieves the palette, building it on first call.<br>
 Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.
 
-**.reduce(image, indexed)** - Quantizes an image
+**.reduce(image, indexed)** - Quantizes an image.<br>
 Returned type matches `image`'s type unless `indexed` is `true`, then an indexed array. Transparent pixels will result in a sparse indexed array.
