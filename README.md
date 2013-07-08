@@ -62,12 +62,12 @@ Returned type matches `image`'s type unless `indexed` is `true`, then an indexed
 
 RgbQuant.js, as any quantizer, makes trade-offs which affect its performance in certain cases. Some parameters may be tweaked to improve the quality of the output at the expense of palette computation and reduction speed. Since the methods used to determine the palette are based on occurrence counts of each pixel's color, three problematic situations can arise.
 
-- No 2 pixels are the same color. eg: unscaled bidirectional gradients.
+- No two pixels are the same color. eg: unscaled bidirectional gradients.
 - Visually distinctive but low-density hues are overwhelmed by dissimilar, dominating hues. (see Quantum Frog)
 - Hues are numerous and densities relatively equal such that choosing the 'top' ones is unpredictable and eliminates a large number of important ones. (see Fish)
 
 The symptom of these issues is a lack of important color groups in the final palette which results in poorly reduced images.
 
-Frequently, the solution is to set `minHueCols: 256` during instantiation. What this will do is inject the 256 first-encountered distinct colors for each hue group (by default there are 10) into the initial palette for analysis. In effect, it forces each encountered hue group to be represented, regardless of specific color counts. If using `method: 1`, you may additionally increase `initColors` to advance the slicing point of the frequency-sorted initial histogram.
+Frequently, the solution is to set `minHueCols: 256` during instantiation. What this will do is inject the first 256 encountered distinct colors for each hue group (by default there are 10) into the initial palette for analysis. In effect, it forces each encountered hue group to be represented, regardless of specific color counts. If using `method: 1`, you may additionally increase `initColors` to advance the slicing point of the frequency-sorted initial histogram.
 
 These adjustments come with a (often significant) speed penalty for palette generation. Reduction passes may also be affected because of the internal memoization/caching used during palette building.
