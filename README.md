@@ -2,6 +2,8 @@ RgbQuant.js
 -----------
 an image quantization lib _(MIT Licensed)_
 
+![quantization](quantization.png "quantization")
+
 ---
 ### Intro
 
