@@ -9,7 +9,7 @@ an image quantization lib _(MIT Licensed)_
 
 Color quantization is the process of reducing an image with thousands or millions of colors to one with fewer (usually 256). The trick is to balance speed, cpu and memory requirements while minimizing the perceptual loss in output quality. More info can be found on [wikipedia](http://en.wikipedia.org/wiki/Color_quantization). Various algorithms can be found on [rosettacode.org](http://rosettacode.org/wiki/Color_quantization).
 
-The motivation for this lib came from the lack of a JS quantizer which could produce fast results with few artifacts while reducing graphics. For general-purpose quantization of photographs, I highly recommend NeuQuant.
+The motivation for this lib came from the lack of a JS quantizer which could produce fast results with few artifacts when reducing graphics. For general-purpose quantization of photographs, I highly recommend NeuQuant.
 
 RgbQuant.js is not a port or implementation of any specific quantization algorithm, though some overlap is inevitable.
 
