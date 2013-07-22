@@ -11,16 +11,16 @@ Color quantization is the process of reducing an image with thousands or million
 
 First, let me acknowledge the elephant in the room: why not just use or port an existing quantization algorithm? As far as JS ports go, there are really only 3.5 options (which implement 2.5 algos).
 
-  - [Median-Cut](http://www.cs.tau.ac.il/~dcor/Graphics/cg-slides/color_q.pdf) - https://github.com/mwcz/median-cut-js
+  - [Median-Cut](http://www.cs.tau.ac.il/~dcor/Graphics/cg-slides/color_q.pdf) - https://github.com/mwcz/median-cut-js<br>
     Not particularly fast.
 
-  - [Leptonica's Modified Median-Cut](http://www.leptonica.com/color-quantization.html) - https://gist.github.com/nrabinowitz/1104622
+  - [Leptonica's Modified Median-Cut](http://www.leptonica.com/color-quantization.html) - https://gist.github.com/nrabinowitz/1104622<br>
     This port is slow and contains major unfixed issues (see my gist comments/samples). Author seems to have abandoned updating the project.
 
-  - [NeuQuant](http://members.ozemail.com.au/~dekker/NEUQUANT.HTML) - [port 1](https://github.com/antimatter15/jsgif/blob/master/NeuQuant.js), [port 2](https://github.com/jnordberg/gif.js/blob/master/src/TypedNeuQuant.js)
+  - [NeuQuant](http://members.ozemail.com.au/~dekker/NEUQUANT.HTML) - [port 1](https://github.com/antimatter15/jsgif/blob/master/NeuQuant.js), [port 2](https://github.com/jnordberg/gif.js/blob/master/src/TypedNeuQuant.js)<br>
     Performs quite well for photographs. Tends to favor smoothness/quality of large gradients over the retention of visually distinct, but less frequent hues. Also, can introduce edge artifacts when used with graphics since it's not designed for working with a small number of colors.
 
-  - [Agglomerative hierarchical clustering](http://www.improvedoutcomes.com/docs/WebSiteDocs/Clustering/Agglomerative_Hierarchical_Clustering_Overview.htm) - http://harthur.github.io/clusterfck/
+  - [Agglomerative hierarchical clustering](http://www.improvedoutcomes.com/docs/WebSiteDocs/Clustering/Agglomerative_Hierarchical_Clustering_Overview.htm) - http://harthur.github.io/clusterfck/<br>
     I only discovered this one recently. It's not quite a full quantization lib, but seems to do the important parts. Rather slowly though :(
 
 My original goal was to upscale frames from `<canvas>` graphics animations and pixelated SNES-style games for [GIFter.js](https://github.com/leeoniya/GIFter.js). It became apparent after trying the first three options that I would need something different.
