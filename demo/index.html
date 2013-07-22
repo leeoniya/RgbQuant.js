@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>RgbQuant.js Playground</title>
+
+	<link rel="stylesheet" href="css/demo.css">
+
+	<script src="js/jquery-2.0.3.min.js"></script>
+	<script src="../src/rgbquant.js"></script>
+	<script src="js/helpers.js"></script>
+	<script src="js/preCode.js"></script>
+	<script src="js/timer.js"></script>
+	<script src="js/demo.js"></script>
+</head>
+<body>
+	<h2>RgbQuant.js</h2>
+
+	<ul>
+		<li><strong>Click an image to quantize it.</strong> Some will use config presets to improve quality.</li>
+		<li><strong>Palette</strong> will show the computed palette that's used for color reduction.</li>
+		<li><strong>Config</strong> values can be edited &amp; re-processed via <strong>update</strong>. If <strong>lock config</strong> is checked, the visible config will be used for all updates and clicked images.</li>
+		<li><strong>Open the browser's console</strong> to see quant steps &amp; timing details.</li>
+		<li>This demo doesn't use Web Workers, so will freeze the UI for a bit (or for a while, depending on config &amp; image).</li>
+		<li>Sometimes Firefox won't load an image fully, just try again.</li>
+	</ul>
+
+	<table id="tbl_showcase">
+		<tr>
+			<th>Graphics</th>
+			<td>
+				<img class="th" src="img/legend_th.jpg">
+				<img class="th" src="img/smb3.png">
+				<img class="th" src="img/super1.png">
+				<img class="th" src="img/super2.png">
+				<img class="th" src="img/pool_th.jpg">
+				<img class="th" src="img/minecraft_th.jpg">
+				<img class="th" src="img/rose.png">
+				<img class="th" src="img/penguins_th.jpg">
+				<img class="th" src="img/baseball_th.jpg">
+				<img class="th" src="img/bebop_th.jpg">
+			</td>
+		</tr>
+		<tr>
+			<th>Gradients</th>
+			<td>
+				<img class="th" src="img/grad5.png">
+				<img class="th" src="img/grad_th.jpg">
+				<img class="th" src="img/grad_default_th.jpg">
+				<img class="th" src="img/colorpan2.png">
+				<img class="th" src="img/pnggrad8rgb.png">
+				<img class="th" src="img/sculptmap_th.jpg">
+				<img class="th" src="img/grad6_th.jpg">
+				<img class="th" src="img/grad7_th.jpg">
+				<img class="th" src="img/grad8_th.jpg">
+			</td>
+		</tr>
+		<tr>
+			<th>Photos</th>
+			<td>
+				<img class="th" src="img/fishie2_th.jpg">
+				<img class="th" src="img/bluff_th.jpg">
+				<img class="th" src="img/pheasant_th.jpg">
+				<img class="th" src="img/rainbow_th.jpg">
+				<img class="th" src="img/cloudplane_th.jpg">
+				<img class="th" src="img/redpanda_th.jpg">
+				<img class="th" src="img/photoman_th.jpg">
+				<img class="th" src="img/biking_th.jpg">
+				<img class="th" src="img/kitteh1_th.jpg">
+			</td>
+		</tr>
+		<tr>
+			<th>Photos 2</th>
+			<td>
+				<img class="th" src="img/fish_th.jpg">
+				<img class="th" src="img/kitteh2_th.jpg">
+				<img class="th" src="img/quantfrog_th.jpg">
+				<img class="th" src="img/treefrog_th.jpg">
+				<img class="th" src="img/baby_th.jpg">
+				<div style="display: inline-block; vertical-align: top; width: 230px;">These photos benefit from setting 'minHueCols' > 0 to retain overwhelemed, low-frequency but distinct hues.</div>
+			</td>
+		</tr>
+		<tr>
+			<th>Multi-image</th>
+			<td>
+				<img class="th" src="img/mult1.jpg">
+				<img class="th" src="img/mult2.jpg">
+				<img class="th" src="img/mult3.jpg">
+				<div style="display: inline-block; vertical-align: top; width: 270px;">A single, optimal palette is progressivley generated for a set of images. Each is then reduced using it.</div>
+			</td>
+		</tr>
+	<!--<tr>
+			<th>Animation<br>real-time</th>
+			<td></td>
+		</tr>-->
+	</table>
+
+	<div class="box">
+		<h4>Config</h4>
+
+		<pre id="config" style="padding-left: 5px;">
+            var opts = {
+                colors: <input id="colors" type="text" value="256" class="autosize">,
+                minHueCols: <input id="minHueCols" type="text" value="0" class="autosize">,
+            };
+		</pre>
+		<label class="custom_cfg"><input id="custom_cfg" type="checkbox"> <span>lock config</span></label>
+		<div style="text-align: right;"><button id="btn_upd">update</button></div>
+
+		<h4 style="border-top: 1px solid silver; margin-top: 5px;">Palette</h4>
+		<div id="palt"></div>
+	</div>
+
+	<div style="overflow: auto;">
+		<div class="box" style="max-width: 1700px;">
+			<h4>Original</h4>
+			<div id="orig"></div>
+		</div>
+
+		<div class="box" style="max-width: 1700px;">
+			<h4>Reduced</h4>
+			<div id="redu"></div>
+		</div>
+	</div>
+</body>
+</html>

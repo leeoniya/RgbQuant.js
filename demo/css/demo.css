@@ -1,0 +1,93 @@
+html, body {
+	font-family: Verdana;
+	font-size: 10pt;
+	color: #333;
+}
+
+img.th:hover {
+	outline: 2px solid red;
+	cursor: pointer;
+}
+
+img.th {
+	height: 75px;
+}
+
+#orig,
+#redu {
+	white-space: nowrap;
+}
+
+th {
+	text-align: left;
+}
+
+input[type="text"] {
+	font-size: 8pt;
+	font-family: "Courier New";
+	font-size: 10pt;
+	padding: 0;
+	border: none;
+	color: red;
+	background: #eee;
+}
+
+#tbl_showcase {
+	border: 1px solid silver;
+	border-collapse: collapse;
+}
+
+#tbl_showcase tr > * {
+	padding: 5px 15px;
+}
+
+#tbl_showcase tr:nth-child(odd) {
+	background: #FFF4CB;
+}
+
+#btn_upd {
+	cursor: pointer;
+	font-size: 8pt;
+	font-family: "Courier New";
+}
+
+.box {
+	float: left;
+	min-height: 200px;
+	min-width: 150px;
+	border: 1px solid silver;
+	margin: 5px;
+}
+
+.box img {
+	vertical-align: middle;
+}
+
+.box h4 {
+	background: #eee;
+	padding: 2px 5px;
+	margin: 0;
+	border-bottom: 1px solid silver;
+}
+
+#palt {
+	text-align: center;
+	padding: 10px;
+	min-width: 175px;
+}
+
+.custom_cfg {
+	cursor: pointer;
+	font-family: "Courier New";
+	float: left;
+	font-weight: bold;
+	margin-top: 3px;
+}
+
+.custom_cfg > * {
+	vertical-align: middle;
+}
+
+pre {
+	margin: 10px 0 0  0;
+}
