@@ -9,23 +9,10 @@ an image quantization lib _(MIT Licensed)_
 
 Color quantization is the process of reducing an image with thousands or millions of colors to one with fewer (usually 256). The trick is to balance speed, cpu and memory requirements while minimizing the perceptual loss in output quality. More info can be found on [wikipedia](http://en.wikipedia.org/wiki/Color_quantization). Various algorithms can be found on [rosettacode.org](http://rosettacode.org/wiki/Color_quantization).
 
-First, let me acknowledge the elephant in the room: why not just use or port an existing quantization algorithm? As far as JS ports go, there are really only 3.5 options (which implement 2.5 algos).
-
-  - [Median-Cut](http://www.cs.tau.ac.il/~dcor/Graphics/cg-slides/color_q.pdf) - https://github.com/mwcz/median-cut-js<br>
-    Not particularly fast.
-
-  - [Leptonica's Modified Median-Cut](http://www.leptonica.com/color-quantization.html) - https://gist.github.com/nrabinowitz/1104622<br>
-    This port is slow and contains major unfixed issues (see my gist comments/samples). Author seems to have abandoned updating the project.
-
-  - [NeuQuant](http://members.ozemail.com.au/~dekker/NEUQUANT.HTML) - [port 1](https://github.com/antimatter15/jsgif/blob/master/NeuQuant.js), [port 2](https://github.com/jnordberg/gif.js/blob/master/src/TypedNeuQuant.js)<br>
-    Performs quite well for photographs. Tends to favor smoothness/quality of large gradients over the retention of visually distinct, but less frequent hues. Also, can introduce edge artifacts when used with graphics since it's not designed for working with a small number of colors.
-
-  - [Agglomerative hierarchical clustering](http://www.improvedoutcomes.com/docs/WebSiteDocs/Clustering/Agglomerative_Hierarchical_Clustering_Overview.htm) - http://harthur.github.io/clusterfck/<br>
-    I only discovered this one recently. It's not quite a full quantization lib, but seems to do the important parts. Rather slowly though :(
-
-My original goal was to upscale frames from `<canvas>` graphics animations and pixelated SNES-style games for [GIFter.js](https://github.com/leeoniya/GIFter.js). It became apparent after trying the first three options that I would need something different.
-
 RgbQuant.js is not a port or implementation of any specific quantization algorithm, though some overlap is inevitable.
+
+---
+### [Playground](http://o-0.me/RgbQuant/)
 
 ---
 ### Usage
@@ -85,3 +72,22 @@ The symptom of these issues is a lack of important color groups in the final pal
 Frequently, the solution is to set `minHueCols: 256` during instantiation. What this will do is inject the first 256 encountered distinct colors for each hue group (by default there are 10) into the initial palette for analysis. In effect, it forces each encountered hue group to be represented, regardless of specific color counts. If using `method: 1`, you may additionally increase `initColors` to advance the slicing point of the frequency-sorted initial histogram.
 
 These adjustments come with a (often significant) speed penalty for palette generation. Reduction passes may also be affected because of the internal memoization/caching used during palette building.
+
+---
+### Why?
+
+Let me acknowledge the elephant in the room: why not just use or port an existing quantization algorithm? As far as JS ports go, there are really only 3.5 options (which implement 2.5 algos).
+
+  - [Median-Cut](http://www.cs.tau.ac.il/~dcor/Graphics/cg-slides/color_q.pdf) - https://github.com/mwcz/median-cut-js<br>
+    Not particularly fast.
+
+  - [Leptonica's Modified Median-Cut](http://www.leptonica.com/color-quantization.html) - https://gist.github.com/nrabinowitz/1104622<br>
+    This port is slow and contains major unfixed issues (see my gist comments/samples). Author seems to have abandoned updating the project.
+
+  - [NeuQuant](http://members.ozemail.com.au/~dekker/NEUQUANT.HTML) - [port 1](https://github.com/antimatter15/jsgif/blob/master/NeuQuant.js), [port 2](https://github.com/jnordberg/gif.js/blob/master/src/TypedNeuQuant.js)<br>
+    Performs quite well for photographs. Tends to favor smoothness/quality of large gradients over the retention of visually distinct, but less frequent hues. Also, can introduce edge artifacts when used with graphics since it's not designed for working with a small number of colors.
+
+  - [Agglomerative hierarchical clustering](http://www.improvedoutcomes.com/docs/WebSiteDocs/Clustering/Agglomerative_Hierarchical_Clustering_Overview.htm) - http://harthur.github.io/clusterfck/<br>
+    I only discovered this one recently. It's not quite a full quantization lib, but seems to do the important parts. Rather slowly though :(
+
+My original goal was to upscale frames from `<canvas>` graphics animations and pixelated SNES-style games for [GIFter.js](https://github.com/leeoniya/GIFter.js). It became apparent after trying the first three options that I would need something different.
