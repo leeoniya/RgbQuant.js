@@ -140,6 +140,8 @@ $(document).on("click", "img.th", function() {
 	$stat = $("#stat"),
 	$note = $("#note"),
 	$opts = $("#opts");
+
+	process(["img/grad_default.png"]);
 }).on("change", ":text", function() {
 	cfg_edited = true;
 });
