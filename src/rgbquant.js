@@ -330,7 +330,6 @@
 
 		var min = 1000,
 			idx,
-			idx,
 			rgb = [
 				(i32 & 0xff),
 				(i32 & 0xff00) >> 8,
