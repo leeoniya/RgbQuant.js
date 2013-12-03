@@ -59,7 +59,8 @@ input[type="text"] {
 	margin: 5px;
 }
 
-.box img {
+.box img,
+.box canvas {
 	vertical-align: middle;
 }
 
