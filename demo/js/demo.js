@@ -25,6 +25,7 @@ var cfgs = {
 	"quantfrog":    {           opts: $.extend({}, dflt_opts, {minHueCols: 512})},
 	"treefrog":     {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 4096})},
 	"baby":         {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 6144})},
+	"chopsuey":     {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 1024})},
 
 	"mult1":        {mult: ["legend","smb3","super2","rose"]},
 	"mult2":        {mult: ["super1","kitteh1","penguins","baby"]},
