@@ -320,11 +320,15 @@
 	// TOTRY: use HUSL - http://boronine.com/husl/
 	RgbQuant.prototype.nearestColor = function nearestColor(i32) {
 		var idx = this.nearestIndex(i32);
-		return this.idxi32[idx];
+		return idx === null ? 0 : this.idxi32[idx];
 	};
 
 	// TOTRY: use HUSL - http://boronine.com/husl/
 	RgbQuant.prototype.nearestIndex = function nearestIndex(i32) {
+		// alpha 0 returns null index
+		if ((i32 & 0xff000000) >> 24 == 0)
+			return null;
+
 		var col = this.i32i32[i32];
 		if (col) return this.i32idx[col];
 
