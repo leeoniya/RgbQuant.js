@@ -14,6 +14,8 @@ RgbQuant.js is not a port or implementation of any specific quantization algorit
 ---
 ### Demo: http://o-0.me/RgbQuant/
 
+![demo page](demo_th.png "demo page")
+
 ---
 ### Usage
 
