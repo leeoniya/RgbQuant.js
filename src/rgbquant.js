@@ -551,6 +551,7 @@
 				buf8 = imgd.data;
 				width = imgd.width;
 			case "Array":
+			case "CanvasPixelArray": //for older browsers like IE10
 				buf8 = buf8 || new Uint8Array(img);
 			case "Uint8Array":
 			case "Uint8ClampedArray":
