@@ -20,6 +20,10 @@ jQuery.getImgs = function(srcs, fn) {
 	jqry.when.apply(jqry, prms).done(fn);
 };
 
+function typeOf(val) {
+	return Object.prototype.toString.call(val).slice(8,-1);
+}
+
 function drawPixels(idxi8, width0, width1) {
 	var idxi32 = new Uint32Array(idxi8.buffer);
 
@@ -37,10 +41,17 @@ function drawPixels(idxi8, width0, width1) {
 
 	ctx2.imageSmoothingEnabled = ctx2.mozImageSmoothingEnabled = ctx2.webkitImageSmoothingEnabled = false;
 
-	var imgd  = ctx.createImageData(can.width, can.height),
-		buf32 = new Uint32Array(imgd.data.buffer);
-
-	buf32.set(idxi32);
+	var imgd = ctx.createImageData(can.width, can.height);
+	
+	if (typeOf(imgd.data) == "CanvasPixelArray") {
+		var data = imgd.data;
+		for (var i = 0, len = data.length; i < len; ++i)
+			data[i] = idxi8[i];
+	}
+	else {
+		var buf32 = new Uint32Array(imgd.data.buffer);
+		buf32.set(idxi32);
+	}
 
 	ctx.putImageData(imgd, 0, 0);
 

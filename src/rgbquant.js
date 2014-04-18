@@ -535,8 +535,8 @@
 		switch (typeOf(img)) {
 			case "HTMLImageElement":
 				can = document.createElement("canvas");
-				can.width = img.width;
-				can.height = img.height;
+				can.width = img.naturalWidth;
+				can.height = img.naturalHeight;
 				ctx = can.getContext("2d");
 				ctx.drawImage(img,0,0);
 			case "HTMLCanvasElement":
@@ -548,9 +548,13 @@
 				imgd = ctx.getImageData(0, 0, can.width, can.height);
 			case "ImageData":
 				imgd = imgd || img;
-				buf8 = imgd.data;
 				width = imgd.width;
+				if (typeOf(imgd.data) == "CanvasPixelArray")
+					buf8 = new Uint8Array(imgd.data);
+				else
+					buf8 = imgd.data;
 			case "Array":
+			case "CanvasPixelArray":
 				buf8 = buf8 || new Uint8Array(img);
 			case "Uint8Array":
 			case "Uint8ClampedArray":
