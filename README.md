@@ -19,7 +19,7 @@ RgbQuant.js is not a port or implementation of any specific quantization algorit
 ---
 ### Usage
 
-**Use Chrome or Firefox** since many HTML5/JS features are used. Canvas, Typed Arrays, Array.forEach.
+**Use Chrome, Firefox or IE10+** since many HTML5/JS features are used. Canvas, Typed Arrays, Array.forEach.
 
 ```js
 // options with defaults (not required)
