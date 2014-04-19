@@ -39,10 +39,11 @@ function drawPixels(idxi8, width0, width1) {
 	can2.width = width1;
 	can2.height = Math.ceil(can.height * width1 / width0);
 
-	ctx2.imageSmoothingEnabled = ctx2.mozImageSmoothingEnabled = ctx2.webkitImageSmoothingEnabled = false;
+	ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.webkitImageSmoothingEnabled = ctx.msImageSmoothingEnabled = false;
+	ctx2.imageSmoothingEnabled = ctx2.mozImageSmoothingEnabled = ctx2.webkitImageSmoothingEnabled = ctx2.msImageSmoothingEnabled = false;
 
 	var imgd = ctx.createImageData(can.width, can.height);
-	
+
 	if (typeOf(imgd.data) == "CanvasPixelArray") {
 		var data = imgd.data;
 		for (var i = 0, len = data.length; i < len; ++i)
