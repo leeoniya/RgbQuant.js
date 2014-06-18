@@ -16,9 +16,9 @@
 		// # of highest-frequency colors to start with for palette reduction
 		this.initColors = opts.initColors || 4096;
 		// color-distance threshold for initial reduction pass
-		this.initDist = opts.initDist || .05;
+		this.initDist = opts.initDist || 0.01;
 		// subsequent passes threshold
-		this.distIncr = opts.distIncr || 0.02;
+		this.distIncr = opts.distIncr || 0.005;
 		// palette grouping
 		this.hueGroups = opts.hueGroups || 10;
 		this.satGroups = opts.satGroups || 10;
@@ -289,7 +289,7 @@
 						var pxj = idxrgb[j], i32j = idxi32[j];
 						if (!pxj) continue;
 
-						var dist = colorDist(pxi, pxj) * 100;
+						var dist = colorDist(pxi, pxj);
 
 						if (dist < thold) {
 							// store index,rgb,dist
@@ -303,7 +303,11 @@
 					}
 				}
 
-				thold += this.distIncr;
+				// palette reduction pass
+				// console.log("palette length: " + palLen);
+
+				// if palette is still much larger than target, increment by larger initDist
+				thold += (palLen > this.colors * 3) ? this.initDist : this.distIncr;
 			}
 
 			// if palette is over-reduced, re-add removed colors with largest distances from last round
@@ -551,14 +555,19 @@
 		);
 	}
 
+	var rd = 255,
+		gd = 255,
+		bd = 255,
+		maxDist = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd);
+
+
 	// returns perceptual Euclidean color distance
 	function colorDist(rgb0, rgb1) {
-		var rd = (rgb1[0]-rgb0[0]),
-			gd = (rgb1[1]-rgb0[1]),
-			bd = (rgb1[2]-rgb0[2]),
-			d2 = Pr*rd*rd + Pg*gd*gd + Pb*bd*bd;
+		var rd = rgb1[0]-rgb0[0],
+			gd = rgb1[1]-rgb0[1],
+			bd = rgb1[2]-rgb0[2];
 
-		return d2/(255*255);
+		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd) / maxDist;
 	}
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php
