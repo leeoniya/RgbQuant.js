@@ -66,23 +66,151 @@
 
 	// image quantizer
 	// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
-	RgbQuant.prototype.reduce = function reduce(img, retType) {
+	RgbQuant.prototype.reduce = function reduce(img, retType, dithKern, dithSerp) {
 		if (!this.palLocked)
 			this.buildPal();
 
 		retType = retType || 1;
 
-		var data = getImageData(img),
-			buf32 = data.buf32,
-			len = buf32.length,
-			out = retType == 1 ? new Uint32Array(len) : retType == 2 ? new Array(len) : null;
+		// reduce w/dither
+		if (dithKern)
+			var out32 = this.dither(img, dithKern, dithSerp);
+		else {
+			var data = getImageData(img),
+				buf32 = data.buf32,
+				len = buf32.length,
+				out32 = new Uint32Array(len);
 
-		for (var i = 0; i < len; i++) {
-			var i32 = buf32[i];
-			out[i] = retType == 1 ? this.nearestColor(i32) : retType == 2 ? this.nearestIndex(i32) : null;
+			for (var i = 0; i < len; i++) {
+				var i32 = buf32[i];
+				out32[i] = this.nearestColor(i32);
+			}
 		}
 
-		return retType == 1 ? new Uint8Array(out.buffer) : retType == 2 ? out : null;
+		if (retType == 1)
+			return new Uint8Array(out32.buffer);
+
+		if (retType == 2) {
+			var out = [],
+				len = out32.length;
+
+			for (var i = 0; i < len; i++) {
+				var i32 = out32[i];
+				out[i] = this.i32idx[i32];
+			}
+
+			return out;
+		}
+	};
+
+	// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
+	RgbQuant.prototype.dither = function(img, kernel, serpentine) {
+		var kernels = {
+			FalseFloydSteinberg: [
+				[3 / 8, 1, 0],
+				[3 / 8, 0, 1],
+				[2 / 8, 1, 1]
+			],
+			FloydSteinberg: [
+				[7 / 16, 1, 0],
+				[3 / 16, -1, 1],
+				[5 / 16, 0, 1],
+				[1 / 16, 1, 1]
+			],
+			Stucki: [
+				[8 / 42, 1, 0],
+				[4 / 42, 2, 0],
+				[2 / 42, -2, 1],
+				[4 / 42, -1, 1],
+				[8 / 42, 0, 1],
+				[4 / 42, 1, 1],
+				[2 / 42, 2, 1],
+				[1 / 42, -2, 2],
+				[2 / 42, -1, 2],
+				[4 / 42, 0, 2],
+				[2 / 42, 1, 2],
+				[1 / 42, 2, 2]
+			],
+			Atkinson: [
+				[1 / 8, 1, 0],
+				[1 / 8, 2, 0],
+				[1 / 8, -1, 1],
+				[1 / 8, 0, 1],
+				[1 / 8, 1, 1],
+				[1 / 8, 0, 2]
+			]
+		};
+
+		if (!kernel || !kernels[kernel]) {
+			throw 'Unknown dithering kernel: ' + kernel;
+		}
+
+		var ds = kernels[kernel];
+
+		var data = getImageData(img),
+//			buf8 = data.buf8,
+			buf32 = data.buf32,
+			width = data.width,
+			height = data.height,
+			len = buf32.length,
+			out32 = new Uint32Array(len);
+
+		var dir = serpentine ? -1 : 1;
+
+		for (var y = 0; y < height; y++) {
+			if (serpentine)
+				dir = dir * -1;
+
+			var lni = y * width;
+
+			for (var x = (dir == 1 ? 0 : width - 1), xend = (dir == 1 ? width : 0); x !== xend; x += dir) {
+				// Image pixel
+				var idx = lni + x,
+					i32 = buf32[idx],
+					r1 = (i32 & 0xff),
+					g1 = (i32 & 0xff00) >> 8,
+					b1 = (i32 & 0xff0000) >> 16;
+
+				// Reduced pixel
+				var i32x = this.nearestColor(i32),
+					r2 = (i32x & 0xff),
+					g2 = (i32x & 0xff00) >> 8,
+					b2 = (i32x & 0xff0000) >> 16;
+
+				// Component distance
+				var er = r1 - r2,
+					eg = g1 - g2,
+					eb = b1 - b2;
+
+				for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
+					var x1 = ds[i][1],	 // *direction; // Should this by timesd by direction?..to make the kernel go in the opposite direction....got no idea....
+						y1 = ds[i][2];
+
+					var lni2 = y1 * width;
+
+					if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
+						var d = ds[i][0];
+						idx2 = idx + (lni2 + x1);
+
+						var r3 = (buf32[idx2] & 0xff),
+							g3 = (buf32[idx2] & 0xff00) >> 8,
+							b3 = (buf32[idx2] & 0xff0000) >> 16;
+
+						var r4 = Math.max(0, Math.min(255, r3 + er * d)),
+							g4 = Math.max(0, Math.min(255, g3 + eg * d)),
+							b4 = Math.max(0, Math.min(255, b3 + eb * d));
+
+						out32[idx2] =
+							(255 << 24)	|	// alpha
+							(b4  << 16)	|	// blue
+							(g4  <<  8)	|	// green
+							 r4;			// red
+					}
+				}
+			}
+		}
+
+		return out32;
 	};
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
