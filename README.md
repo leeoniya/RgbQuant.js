@@ -29,7 +29,9 @@ var opts = {
     boxSize: [64,64],   // subregion dims (if method = 2)
     boxPxls: 2,         // min-population threshold (if method = 2)
     initColors: 4096,   // # of top-occurring colors  to start with (if method = 1)
-	minHueCols: 0,		// # of colors per hue group to evaluate regardless of counts, to retain low-count hues
+    minHueCols: 0,      // # of colors per hue group to evaluate regardless of counts, to retain low-count hues
+    dithKern: null,     // dithering kernel name, 'FloydSteinberg', 'Stucki, 'Atkinson' or 'FalseFloydSteinberg'
+    dithSerp: false,    // enable serpentine pattern dithering
 };
 
 var q = new RgbQuant(opts);
@@ -58,7 +60,7 @@ var outA = q.reduce(imgA),
 Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.
 
 **.reduce(image, retType, dithKern, dithSerp)** - Quantizes an image.<br>
-`image` can be any of the types specified for `.sample()` above. `retType` determines returned type. `1` - Uint8Array (default), `2` - Indexed array. `dithKern` can be specified if dithering is needed, can be any of `'FloydSteinberg'`, `'FalseFloydSteinberg'`, `'Stucki'`, `'Atkinson'`. `dithSerp` can be `true` or `false` and determines if dithering is done in a serpentine pattern. Transparent pixels will result in a sparse indexed array.
+`image` can be any of the types specified for `.sample()` above. `retType` determines returned type. `1` - Uint8Array (default), `2` - Indexed array. `dithKern` can be specified if dithering is needed that differs from what's set in via global opts (off by default), can be any of `'FloydSteinberg'`, `'FalseFloydSteinberg'`, `'Stucki'`, `'Atkinson'`. `dithSerp` can be `true` or `false` and determines if dithering is done in a serpentine pattern. Transparent pixels will result in a sparse indexed array.
 
 ---
 ### Caveats & Tips
