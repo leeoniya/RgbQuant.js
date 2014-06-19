@@ -5,6 +5,8 @@ var dflt_opts = {
 	method: 2,
 	initColors: 4096,
 	minHueCols: 0,
+	dithKern: null,
+	dithSerp: false,
 };
 
 var cfgs = {
@@ -19,6 +21,8 @@ var cfgs = {
 	"photoman":     {jpg: true},
 	"biking":       {jpg: true},
 	"kitteh1":      {jpg: true},
+	"compcube":     {jpg: true},
+	"medusa":       {jpg: true},
 
 	"fish":         {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 4096})},
 	"kitteh2":      {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 512})},
@@ -46,8 +50,16 @@ function baseName(src) {
 function getOpts(id) {
 	if ($("#custom_cfg")[0].checked || cfg_edited) {
 		var opts = {};
-		for (var i in dflt_opts)
-			opts[i] = +$("#" + i).val();
+
+		for (var i in dflt_opts) {
+			var $el = $("#" + i),
+				typ = $el.attr("type"),
+				val = $el.val(),
+				num = parseFloat(val);
+
+			opts[i] = typ == "checkbox" ? $el.prop("checked") : isNaN(num) ? val : num;
+		}
+
 		return $.extend({}, dflt_opts, opts);
 	}
 	else if (cfgs[id] && cfgs[id].opts)
@@ -105,11 +117,11 @@ function process(srcs) {
 			var img = this, id = baseName(img.src)[0];
 
 			var img8;
-			ti.mark("reduce '" + id + "'", function(){
+			ti.mark("reduce '" + id + "'", function() {
 				img8 = quant.reduce(img);
 			});
 
-			ti.mark("reduced -> DOM", function(){
+			ti.mark("reduced -> DOM", function() {
 				var	ican = drawPixels(img8, img.width);
 				$redu.append(ican);
 			});
@@ -142,7 +154,7 @@ $(document).on("click", "img.th", function() {
 	$note = $("#note"),
 	$opts = $("#opts");
 
-	process(["img/grad_default.png"]);
-}).on("change", ":text", function() {
+//	process(["img/grad_default.png"]);
+}).on("change", "input, textarea, select", function() {
 	cfg_edited = true;
 });

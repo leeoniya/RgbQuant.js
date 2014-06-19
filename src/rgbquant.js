@@ -37,6 +37,11 @@
 		// palette sort order
 //		this.sortPal = ['hue-','lum-','sat-'];
 
+		// dithering/error diffusion kernel name
+		this.dithKern = opts.dithKern || null;
+		// dither serpentine pattern
+		this.dithSerp = opts.dithSerp || false;
+
 		// accumulated histogram
 		this.histogram = {};
 		// palette - rgb triplets
@@ -69,6 +74,9 @@
 	RgbQuant.prototype.reduce = function reduce(img, retType, dithKern, dithSerp) {
 		if (!this.palLocked)
 			this.buildPal();
+
+		dithKern = dithKern || this.dithKern;
+		dithSerp = typeof dithSerp != "undefined" ? dithSerp : this.dithSerp;
 
 		retType = retType || 1;
 
@@ -106,16 +114,16 @@
 	// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
 	RgbQuant.prototype.dither = function(img, kernel, serpentine) {
 		var kernels = {
-			FalseFloydSteinberg: [
-				[3 / 8, 1, 0],
-				[3 / 8, 0, 1],
-				[2 / 8, 1, 1]
-			],
 			FloydSteinberg: [
 				[7 / 16, 1, 0],
 				[3 / 16, -1, 1],
 				[5 / 16, 0, 1],
 				[1 / 16, 1, 1]
+			],
+			FalseFloydSteinberg: [
+				[3 / 8, 1, 0],
+				[3 / 8, 0, 1],
+				[2 / 8, 1, 1]
 			],
 			Stucki: [
 				[8 / 42, 1, 0],
@@ -188,7 +196,7 @@
 					eb = b1 - b2;
 
 				for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
-					var x1 = ds[i][1],	 // *direction; // Should this by timesd by direction?..to make the kernel go in the opposite direction....got no idea....
+					var x1 = ds[i][1] * dir,
 						y1 = ds[i][2];
 
 					var lni2 = y1 * width;
