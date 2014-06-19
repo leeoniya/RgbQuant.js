@@ -152,8 +152,7 @@
 			buf32 = data.buf32,
 			width = data.width,
 			height = data.height,
-			len = buf32.length,
-			out32 = new Uint32Array(len);
+			len = buf32.length;
 
 		var dir = serpentine ? -1 : 1;
 
@@ -177,6 +176,12 @@
 					g2 = (i32x & 0xff00) >> 8,
 					b2 = (i32x & 0xff0000) >> 16;
 
+				buf32[idx] =
+					(255 << 24)	|	// alpha
+					(b2  << 16)	|	// blue
+					(g2  <<  8)	|	// green
+					 r2;
+
 				// Component distance
 				var er = r1 - r2,
 					eg = g1 - g2,
@@ -190,7 +195,7 @@
 
 					if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
 						var d = ds[i][0];
-						idx2 = idx + (lni2 + x1);
+						var idx2 = idx + (lni2 + x1);
 
 						var r3 = (buf32[idx2] & 0xff),
 							g3 = (buf32[idx2] & 0xff00) >> 8,
@@ -200,7 +205,7 @@
 							g4 = Math.max(0, Math.min(255, g3 + eg * d)),
 							b4 = Math.max(0, Math.min(255, b3 + eb * d));
 
-						out32[idx2] =
+						buf32[idx2] =
 							(255 << 24)	|	// alpha
 							(b4  << 16)	|	// blue
 							(g4  <<  8)	|	// green
@@ -210,7 +215,7 @@
 			}
 		}
 
-		return out32;
+		return buf32;
 	};
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
