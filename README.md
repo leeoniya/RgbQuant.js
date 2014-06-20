@@ -30,7 +30,7 @@ var opts = {
     boxPxls: 2,         // min-population threshold (if method = 2)
     initColors: 4096,   // # of top-occurring colors  to start with (if method = 1)
     minHueCols: 0,      // # of colors per hue group to evaluate regardless of counts, to retain low-count hues
-    dithKern: null,     // dithering kernel name, 'FloydSteinberg', 'Stucki, 'Atkinson' or 'FalseFloydSteinberg'
+    dithKern: null,     // dithering kernel name, see available kernels in docs below
     dithSerp: false,    // enable serpentine pattern dithering
 };
 
@@ -54,13 +54,30 @@ var outA = q.reduce(imgA),
 ### Docs
 
 **.sample(image, width)** - Performs histogram analysis.<br>
-`image` may be any of *&lt;img&gt;*, *&lt;canvas&gt;*, *Context2D*, *ImageData*, *Typed Array*, *Array*. `width` is required if `image` is an array.
+`image` may be any of *&lt;img&gt;*, *&lt;canvas&gt;*, *Context2D*, *ImageData*, *Typed Array*, *Array*.<br>
+`width` is required if `image` is an array.
 
 **.palette(tuples)** - Retrieves the palette, building it on first call.<br>
 Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.
 
 **.reduce(image, retType, dithKern, dithSerp)** - Quantizes an image.<br>
-`image` can be any of the types specified for `.sample()` above. `retType` determines returned type. `1` - Uint8Array (default), `2` - Indexed array. `dithKern` can be specified if dithering is needed that differs from what's set in via global opts (off by default), can be any of `'FloydSteinberg'`, `'FalseFloydSteinberg'`, `'Stucki'`, `'Atkinson'`. `dithSerp` can be `true` or `false` and determines if dithering is done in a serpentine pattern. Transparent pixels will result in a sparse indexed array.
+`image` can be any of the types specified for `.sample()` above.<br>
+`retType` determines returned type. `1` - Uint8Array (default), `2` - Indexed array.<br>
+`dithKern` is a dithering kernel that can override what was specified in global opts (off by default), available options are:
+
+  - FloydSteinberg
+  - FalseFloydSteinberg
+  - Stucki
+  - Atkinson
+  - Jarvis
+  - Burkes
+  - Sierra
+  - TwoSierra
+  - SierraLite
+
+`dithSerp` can be `true` or `false` and determines if dithering is done in a serpentine pattern.<br>
+
+\* Transparent pixels will result in a sparse indexed array.
 
 ---
 ### Caveats & Tips
