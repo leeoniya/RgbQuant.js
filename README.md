@@ -2,7 +2,7 @@ RgbQuant.js
 -----------
 an image quantization lib _(MIT Licensed)_
 
-![quantization](quantization.png "quantization")
+![quantization](https://raw.githubusercontent.com/leeoniya/RgbQuant.js/master/quantization.png "quantization")
 
 ---
 ### Intro
@@ -14,7 +14,7 @@ RgbQuant.js is not a port or implementation of any specific quantization algorit
 ---
 ### Demo: http://o-0.me/RgbQuant/
 
-![demo page](demo_th.png "demo page")
+![demo page](https://raw.githubusercontent.com/leeoniya/RgbQuant.js/master/demo_th.png "demo page")
 
 ---
 ### Usage
