@@ -277,7 +277,7 @@
 	};
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
-	RgbQuant.prototype.buildPal = function buildPal() {
+	RgbQuant.prototype.buildPal = function buildPal(noSort) {
 		if (this.palLocked) return;
 
 		var histG  = this.histogram,
@@ -313,12 +313,13 @@
 		idxi32 = idxi32.map(function(v){return +v;});
 
 		this.reducePal(idxi32);
-		this.sortPal();
+		if (!noSort)
+			this.sortPal();
 		this.palLocked = true;
 	};
 
-	RgbQuant.prototype.palette = function palette(tuples) {
-		this.buildPal();
+	RgbQuant.prototype.palette = function palette(tuples, noSort) {
+		this.buildPal(noSort);
 		return tuples ? this.idxrgb : new Uint8Array((new Uint32Array(this.idxi32)).buffer);
 	};
 
