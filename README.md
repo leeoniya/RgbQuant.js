@@ -57,8 +57,9 @@ var outA = q.reduce(imgA),
 `image` may be any of *&lt;img&gt;*, *&lt;canvas&gt;*, *Context2D*, *ImageData*, *Typed Array*, *Array*.<br>
 `width` is required if `image` is an array.
 
-**.palette(tuples)** - Retrieves the palette, building it on first call.<br>
-Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.
+**.palette(tuples, noSort)** - Retrieves the palette, building it on first call.<br>
+Returned type is a Uint8Array unless `tuples` is `true`, then an array of `[r,g,b]` tuples.<br>
+`noSort` if set to `true` will disable palette sorting by hue/luminance and leaves it ordered from highest to lowest color occurrence counts.
 
 **.reduce(image, retType, dithKern, dithSerp)** - Quantizes an image.<br>
 `image` can be any of the types specified for `.sample()` above.<br>
