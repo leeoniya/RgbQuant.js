@@ -1,7 +1,7 @@
 var cfg_edited = false;
 
 var dflt_opts = {
-	colors: 256,
+	colors: 16,
 	method: 2,
 	initColors: 4096,
 	minHueCols: 0,
