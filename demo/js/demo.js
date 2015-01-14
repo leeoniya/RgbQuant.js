@@ -108,6 +108,11 @@ function process(srcs) {
 			pal8 = quant.palette();
 		});
 
+		var palRgb;
+		ti.mark("build RGB palette", function() {
+			palRgb = quant.palette(true);
+		});
+		
 		var pcan = drawPixels(pal8, 16, 128);
 
 		var plabel = $('<div>').addClass('pal-numbers').html(quant.palette(true).map(function(color){
@@ -121,9 +126,23 @@ function process(srcs) {
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
-			var img8;
+			var img8i;
 			ti.mark("reduce '" + id + "'", function() {
-				img8 = quant.reduce(img);
+				img8i = quant.reduce(img, 2);
+			});
+			
+			var img8;
+			ti.mark("build img8 '" + id + "'", function() {
+				img8 = new Uint8Array(img8i.length * 4);
+				
+				var len = img8i.length;
+				for (var i = 0, j = 0; i != len; i++, j += 4) {
+					var rgb = palRgb[img8i[i]];
+					img8[j] = rgb[0];
+					img8[j + 1] = rgb[1];
+					img8[j + 2] = rgb[2];
+					img8[j + 3] = 0xFF;
+				}
 			});
 
 			ti.mark("reduced -> DOM", function() {
