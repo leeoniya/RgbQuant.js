@@ -227,7 +227,7 @@ function process(srcs) {
 					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
 						var mapCell = mapLine[mX];
 						var tile = rawTilBg.tiles[mapCell.tileNum];
-						image.drawTile(tile, mX * 8, mY * 8);
+						image.drawTile(tile, mX * 8, mY * 8, mapCell.flipX, mapCell.flipY);
 					}
 				}
 				
@@ -260,14 +260,17 @@ IndexedImage.prototype.toRgbBytes = function() {
 	return img8;
 }
 
-IndexedImage.prototype.drawTile = function(tile, x, y) {
-	var offs = y * this.width + x;
+IndexedImage.prototype.drawTile = function(tile, x, y, flipX, flipY) {
+	var flipX = tile.flipX ? !flipX : flipX;
+	var flipY = tile.flipY ? !flipY : flipY;
+
+	var offs = y * this.width + x;	
 	
 	for (var tY = 0; tY != 8; tY++) {
-		var tileLine = tile.pixels[tY];
+		var tileLine = tile.pixels[flipY ? 7 - tY : tY];
 		var yOffs = offs + tY * this.width
 		for (var tX = 0; tX != 8; tX++) {
-			this.pixels[yOffs + tX] = tileLine[tX];
+			this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
 		}
 	}
 }
