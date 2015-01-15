@@ -221,15 +221,7 @@ function process(srcs) {
 			
 			ti.mark("raw map -> DOM", function() {
 				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
-				
-				for (var mY = 0; mY != rawTilBg.mapH; mY++) {
-					var mapLine = rawTilBg.map[mY];
-					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
-						var mapCell = mapLine[mX];
-						var tile = rawTilBg.tiles[mapCell.tileNum];
-						image.drawTile(tile, mX * 8, mY * 8, mapCell.flipX, mapCell.flipY);
-					}
-				}
+				image.drawMap(rawTilBg);
 				
 				var	ican = drawPixels(image.toRgbBytes(), image.width);
 				$dupli.append(ican);
@@ -271,6 +263,17 @@ IndexedImage.prototype.drawTile = function(tile, x, y, flipX, flipY) {
 		var yOffs = offs + tY * this.width
 		for (var tX = 0; tX != 8; tX++) {
 			this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
+		}
+	}
+}
+
+IndexedImage.prototype.drawMap = function(map) {
+	for (var mY = 0; mY != map.mapH; mY++) {
+		var mapLine = map.map[mY];
+		for (var mX = 0; mX != map.mapW; mX++) {
+			var mapCell = mapLine[mX];
+			var tile = map.tiles[mapCell.tileNum];
+			this.drawTile(tile, mX * 8, mY * 8, mapCell.flipX, mapCell.flipY);
 		}
 	}
 }
