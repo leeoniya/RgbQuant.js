@@ -131,18 +131,11 @@ function process(srcs) {
 				img8i = quant.reduce(img, 2);
 			});
 			
+			var indexedImage = new IndexedImage(img.width, img.height, palRgb, img8i);
+			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
-				img8 = new Uint8Array(img8i.length * 4);
-				
-				var len = img8i.length;
-				for (var i = 0, j = 0; i != len; i++, j += 4) {
-					var rgb = palRgb[img8i[i]];
-					img8[j] = rgb[0];
-					img8[j + 1] = rgb[1];
-					img8[j + 2] = rgb[2];
-					img8[j + 3] = 0xFF;
-				}
+				img8 = indexedImage.rgbBytes();
 			});
 
 			ti.mark("reduced -> DOM", function() {
@@ -167,7 +160,7 @@ function process(srcs) {
 					var yOffs = iY * img.width;
 					
 					var mapLine = [];
-					rawTilBg.map[iY] = mapLine;
+					rawTilBg.map[mY] = mapLine;
 					
 					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
 						var tile = {
@@ -212,8 +205,58 @@ function process(srcs) {
 			});			
 			
 			console.log("Raw map", rawTilBg);
+
+			ti.mark("raw map -> DOM", function() {
+				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
+				
+				for (var mY = 0; mY != rawTilBg.mapH; mY++) {
+					var mapLine = rawTilBg.map[mY];
+					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
+						var mapCell = mapLine[mX];
+						var tile = rawTilBg.tiles[mapCell.tileNum];
+						image.drawTile(tile, mX * 8, mY * 8);
+					}
+				}
+				
+				var	ican = drawPixels(image.rgbBytes(), image.width);
+				$dupli.append(ican);
+			});
 		});
 	});
+}
+
+function IndexedImage(width, height, pallete, pixels) {
+	this.width = width;
+	this.height = height;
+	this.pallete = pallete;
+	this.pixels = new Uint8Array(pixels || width * height) 
+}
+
+IndexedImage.prototype.rgbBytes = function() {
+	var img8 = new Uint8Array(this.pixels.length * 4);
+	
+	var len = this.pixels.length;
+	for (var i = 0, j = 0; i != len; i++, j += 4) {
+		var rgb = this.pallete[this.pixels[i]];
+		img8[j] = rgb[0];
+		img8[j + 1] = rgb[1];
+		img8[j + 2] = rgb[2];
+		img8[j + 3] = 0xFF;
+	}
+	
+	return img8;
+}
+
+IndexedImage.prototype.drawTile = function(tile, x, y) {
+	var offs = y * this.width + x;
+	
+	for (var tY = 0; tY != 8; tY++) {
+		var tileLine = tile.pixels[tY];
+		var yOffs = offs + tY * this.width
+		for (var tX = 0; tX != 8; tX++) {
+			this.pixels[yOffs + tX] = tileLine[tX];
+		}
+	}
 }
 
 $(document).on("click", "img.th", function() {
@@ -236,6 +279,8 @@ $(document).on("click", "img.th", function() {
 }).on("ready", function(){
 	$orig = $("#orig"),
 	$redu = $("#redu"),
+	$dupli = $("#dupli"),
+	
 	$palt = $("#palt"),
 	$stat = $("#stat"),
 	$note = $("#note"),
