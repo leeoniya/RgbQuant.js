@@ -123,6 +123,8 @@ function process(srcs) {
 		$palt.empty().append(pcan).append(plabel);
 
 		$redu.empty();
+		$tsetd.empty();
+		$dupli.empty();
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
@@ -135,7 +137,7 @@ function process(srcs) {
 			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
-				img8 = indexedImage.rgbBytes();
+				img8 = indexedImage.toRgbBytes();
 			});
 
 			ti.mark("reduced -> DOM", function() {
@@ -206,6 +208,17 @@ function process(srcs) {
 			
 			console.log("Raw map", rawTilBg);
 
+			ti.mark("tileset -> DOM", function() {
+				$tsetd.append($('<h5>').html(rawTilBg.tiles.length + ' tiles'));
+
+				rawTilBg.tiles.forEach(function(tile){
+					var image = new IndexedImage(8, 8, indexedImage.pallete);
+					image.drawTile(tile, 0, 0);
+					var	ican = drawPixels(image.toRgbBytes(), image.width);
+					$tsetd.append(ican);
+				});
+			});
+			
 			ti.mark("raw map -> DOM", function() {
 				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
 				
@@ -218,7 +231,7 @@ function process(srcs) {
 					}
 				}
 				
-				var	ican = drawPixels(image.rgbBytes(), image.width);
+				var	ican = drawPixels(image.toRgbBytes(), image.width);
 				$dupli.append(ican);
 			});
 		});
@@ -232,7 +245,7 @@ function IndexedImage(width, height, pallete, pixels) {
 	this.pixels = new Uint8Array(pixels || width * height) 
 }
 
-IndexedImage.prototype.rgbBytes = function() {
+IndexedImage.prototype.toRgbBytes = function() {
 	var img8 = new Uint8Array(this.pixels.length * 4);
 	
 	var len = this.pixels.length;
@@ -279,6 +292,7 @@ $(document).on("click", "img.th", function() {
 }).on("ready", function(){
 	$orig = $("#orig"),
 	$redu = $("#redu"),
+	$tsetd = $("#tsetd"),
 	$dupli = $("#dupli"),
 	
 	$palt = $("#palt"),

@@ -71,6 +71,17 @@ input[type="text"] {
 	border-bottom: 1px solid silver;
 }
 
+.box.tileset {
+	width: 128px;
+	max-height: 192px;
+	line-height: 0;
+	overflow-y: auto;
+}
+
+.box.tileset h4 {
+	line-height: normal;
+}
+
 #palt {
 	text-align: center;
 	padding: 10px;
