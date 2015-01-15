@@ -149,6 +149,69 @@ function process(srcs) {
 				var	ican = drawPixels(img8, img.width);
 				$redu.append(ican);
 			});
+			
+			// Generates the unoptimized tileset + map
+			var rawTilBg;
+			ti.mark("raw tiles and background", function() {
+				rawTilBg = {
+					pallete: palRgb,
+					mapW: Math.ceil(img.width / 8.0),
+					mapH: Math.ceil(img.height / 8.0),
+					tiles: [],
+					map: []
+				};
+				
+				for (var mY = 0; mY != rawTilBg.mapH; mY++) {
+					var iY = mY * 8;
+					var maxY = Math.min(iY + 8, img.height);
+					var yOffs = iY * img.width;
+					
+					var mapLine = [];
+					rawTilBg.map[iY] = mapLine;
+					
+					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
+						var tile = {
+							number: rawTilBg.tiles.length,
+							flipX: false,
+							flipY: false,
+							pixels: [
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0],
+								[0,0,0,0,0,0,0,0]
+							]
+						};						
+						rawTilBg.tiles.push(tile);
+
+						// Copíes pixels from the image into the tile
+						var iX = mX * 8;
+						var maxX = Math.min(iX + 8, img.width);
+						var xyOffs = yOffs + iX;
+						
+						var lineOffs = xyOffs;						
+						for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
+							var tileLine = tile.pixels[pY];
+							for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
+								tileLine[pX] = img8i[lineOffs + pX];
+							}
+							lineOffs += img.width;
+						}						
+						
+						// Makes the current map slot point to the tile
+						mapLine[mX] = {
+							flipX: false,
+							flipY: false,
+							tileNum: tile.number
+						};
+					}
+				}
+			});			
+			
+			console.log("Raw map", rawTilBg);
 		});
 	});
 }
