@@ -244,6 +244,14 @@ function process(srcs) {
 				// They're identical
 				return 0; 
 			}
+			
+			function tileKey(tile) {
+				return tile.pixels.map(function(line){ return line.join(',') }).join(';');
+			}
+			
+			function boolXor(a, b) {
+				return !a != !b;
+			}
 
 			ti.mark("normalize tiles", function() {
 				rawTilBg.tiles = rawTilBg.tiles.map(function(tile){
@@ -255,6 +263,39 @@ function process(srcs) {
 						return compTilePixels(a, b) > 0 ? b : a;
 					});
 				});
+			});
+
+			ti.mark("remove duplicate tiles", function() {
+				var newTiles = [];
+				var newIndexes = {};
+				var indexMap = rawTilBg.tiles.map(function(tile){
+					var key = tileKey(tile);
+					var newTileNum;
+					if (key in newIndexes) {
+						newTileNum = newIndexes[key];
+					} else {
+						newTileNum = newTiles.length;
+						newIndexes[key] = newTileNum;
+						newTiles.push(tile);
+					}
+					
+					return newTileNum;
+				});
+				
+				rawTilBg.map = rawTilBg.map.map(function(line){
+					return line.map(function(cell){
+						var newTileNum = indexMap[cell.tileNum];
+						var origTile = rawTilBg.tiles[cell.tileNum];
+						var newTile = newTiles[newTileNum];
+						
+						return {
+							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
+							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
+							tileNum: newTileNum
+						}
+					});
+				});
+				rawTilBg.tiles = newTiles;
 			});
 
 			ti.mark("tileset -> DOM", function() {
