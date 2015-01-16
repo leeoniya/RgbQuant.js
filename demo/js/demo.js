@@ -207,13 +207,62 @@ function process(srcs) {
 			});			
 			
 			console.log("Raw map", rawTilBg);
+			
+			function copyTileFlipX(orig) {
+				return {
+					number: orig.number,
+					flipX: !orig.flipX,
+					flipY: orig.flipY,
+					pixels: orig.pixels.map(function(line){
+						return line.slice().reverse();
+					})
+				}
+			}
+
+			function copyTileFlipY(orig) {
+				return {
+					number: orig.number,
+					flipX: orig.flipX,
+					flipY: !orig.flipY,
+					pixels: orig.pixels.slice().reverse()
+				}
+			}
+			
+			function compTilePixels(a, b) {
+				for (var tY = 0; tY != 8; tY++) {
+					var aLin = a.pixels[tY];
+					var bLin = b.pixels[tY];
+					for (var tX = 0; tX != 8; tX++) {
+						var diff = aLin[tX] - bLin[tX];
+						if (diff) {
+							// They're different; returns a positive or negative value to indicate the order
+							return diff;
+						}
+					}
+				}
+				
+				// They're identical
+				return 0; 
+			}
+
+			ti.mark("normalize tiles", function() {
+				rawTilBg.tiles = rawTilBg.tiles.map(function(tile){
+					var orig = tile,
+						flipX = copyTileFlipX(tile),
+						flipY = copyTileFlipY(tile),
+						flipXY = copyTileFlipY(flipX);
+					return [orig, flipX, flipY, flipXY].reduce(function(a, b){
+						return compTilePixels(a, b) > 0 ? b : a;
+					});
+				});
+			});
 
 			ti.mark("tileset -> DOM", function() {
 				$tsetd.append($('<h5>').html(rawTilBg.tiles.length + ' tiles'));
 
 				rawTilBg.tiles.forEach(function(tile){
 					var image = new IndexedImage(8, 8, indexedImage.pallete);
-					image.drawTile(tile, 0, 0);
+					image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
 					var	ican = drawPixels(image.toRgbBytes(), image.width);
 					$tsetd.append(ican);
 				});
