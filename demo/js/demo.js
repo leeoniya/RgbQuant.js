@@ -276,6 +276,8 @@ function process(srcs) {
 					} else {
 						newTileNum = newTiles.length;
 						newIndexes[key] = newTileNum;
+						
+						tile.number = newTileNum;
 						newTiles.push(tile);
 					}
 					
@@ -328,6 +330,32 @@ function process(srcs) {
 			});
 			
 			console.log(similarTiles);
+			ti.mark("similar tiles -> DOM", function() {
+				var indexMap = [];
+				var newTiles = similarTiles.map(function(group, newTileNum){ 
+					group.forEach(function(tile){
+						indexMap[tile.number] = newTileNum;
+					});
+					return group[0];
+				});
+			
+				displayTileset($tsets, newTiles, rawTilBg.pallete);
+				
+				rawTilBg.map = rawTilBg.map.map(function(line){
+					return line.map(function(cell){
+						var newTileNum = indexMap[cell.tileNum];
+						var origTile = rawTilBg.tiles[cell.tileNum];
+						var newTile = newTiles[newTileNum];
+						
+						return {
+							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
+							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
+							tileNum: newTileNum
+						}
+					});
+				});
+				rawTilBg.tiles = newTiles;
+			});
 			
 			ti.mark("raw map -> DOM", function() {
 				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
@@ -420,6 +448,7 @@ $(document).on("click", "img.th", function() {
 	$orig = $("#orig"),
 	$redu = $("#redu"),
 	$tsetd = $("#tsetd"),
+	$tsets = $("#tsets"),
 	$dupli = $("#dupli"),
 	
 	$palt = $("#palt"),
