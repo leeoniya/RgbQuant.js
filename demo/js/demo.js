@@ -124,6 +124,7 @@ function process(srcs) {
 
 		$redu.empty();
 		$tsetd.empty();
+		$tsets.empty();
 		$dupli.empty();
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
