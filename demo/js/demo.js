@@ -299,15 +299,35 @@ function process(srcs) {
 			});
 
 			ti.mark("tileset -> DOM", function() {
-				$tsetd.append($('<h5>').html(rawTilBg.tiles.length + ' tiles'));
+				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.pallete);
+			});
 
-				rawTilBg.tiles.forEach(function(tile){
-					var image = new IndexedImage(8, 8, indexedImage.pallete);
-					image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
-					var	ican = drawPixels(image.toRgbBytes(), image.width);
-					$tsetd.append(ican);
+			var similarTiles;
+			ti.mark("clusterize", function() {
+				var data = rawTilBg.tiles.map(function(tile){
+					return {
+						tile: tile,
+						feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
+							return a.concat(rawTilBg.pallete[colorIndex]);
+						}, [])
+					};
+				});
+				
+				var clusters = clusterfck.kmeans(_.pluck(data, 'feature'), 256);
+				
+				function buildKey(featureVector) {
+					return featureVector.join(',');
+				}
+				
+				var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
+				similarTiles = clusters.map(function(group){
+					return group.map(function(feature){
+						return index[buildKey(feature)].tile;
+					});
 				});
 			});
+			
+			console.log(similarTiles);
 			
 			ti.mark("raw map -> DOM", function() {
 				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
@@ -317,6 +337,17 @@ function process(srcs) {
 				$dupli.append(ican);
 			});
 		});
+	});
+}
+
+function displayTileset($container, tiles, pallete) {
+	$container.append($('<h5>').html(tiles.length + ' tiles'));
+
+	tiles.forEach(function(tile){
+		var image = new IndexedImage(8, 8, pallete);
+		image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
+		var	ican = drawPixels(image.toRgbBytes(), image.width);
+		$container.append(ican);
 	});
 }
 
