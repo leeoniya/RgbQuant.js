@@ -45,7 +45,7 @@
 		// accumulated histogram
 		this.histogram = {};
 		// palette - rgb triplets
-		this.idxrgb = opts.palette || [];
+		this.idxrgb = opts.palette ? opts.palette.slice(0) : [];
 		// palette - int32 vals
 		this.idxi32 = [];
 		// reverse lookup {i32:idx}
