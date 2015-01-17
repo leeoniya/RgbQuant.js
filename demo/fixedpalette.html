@@ -6,6 +6,16 @@
 
 	<script src="../src/rgbquant.js"></script>
 
+	<style>
+		#pal_orig,
+		#pal_final {
+			width: 200px;
+			image-rendering: pixelated;
+			image-rendering: -moz-crisp-edges;
+			margin-right: 50px;
+		}
+	</style>
+
 	<script>
 		var rgb3level = [
 			[0,0,0],
@@ -37,28 +47,132 @@
 			[255,0,128]
 		];
 
+		// Sega Master System
+		var rgb6bit = [
+			[0,0,0],
+			[104,104,104],
+			[183,183,183],
+			[255,255,255],
+			[104,0,0],
+			[183,0,0],
+			[255,0,0],
+			[183,104,104],
+			[255,104,104],
+			[255,183,183],
+			[183,104,0],
+			[255,104,0],
+			[255,183,0],
+			[255,183,104],
+			[104,104,0],
+			[104,183,0],
+			[183,183,0],
+			[183,183,104],
+			[183,255,104],
+			[183,255,0],
+			[255,255,0],
+			[255,255,104],
+			[255,255,183],
+			[0,104,0],
+			[0,183,0],
+			[104,183,104],
+			[0,255,0],
+			[104,255,104],
+			[104,255,0],
+			[183,255,183],
+			[0,183,104],
+			[0,255,104],
+			[104,255,183],
+			[0,104,104],
+			[0,183,183],
+			[104,183,183],
+			[0,183,255],
+			[0,255,183],
+			[0,255,255],
+			[104,255,255],
+			[183,255,255],
+			[0,104,183],
+			[0,104,255],
+			[104,183,255],
+			[0,0,104],
+			[0,0,183],
+			[0,0,255],
+			[104,0,255],
+			[104,104,183],
+			[104,104,255],
+			[183,183,255],
+			[104,0,104],
+			[104,0,183],
+			[183,0,183],
+			[183,0,255],
+			[183,104,183],
+			[255,0,255],
+			[183,104,255],
+			[255,104,255],
+			[255,183,255],
+			[183,0,104],
+			[255,0,104],
+			[255,0,183],
+			[255,104,183]
+		];
+
+		var gray4bit = [
+			[0, 0, 0],
+			[17, 17, 17],
+			[34, 34, 34],
+			[51, 51, 51],
+			[68, 68, 68],
+			[85, 85, 85],
+			[102, 102, 102],
+			[119, 119, 119],
+			[136, 136, 136],
+			[153, 153, 153],
+			[170, 170, 170],
+			[187, 187, 187],
+			[204, 204, 204],
+			[221, 221, 221],
+			[238, 238, 238],
+			[255, 255, 255],
+		];
+
 		var q = new RgbQuant({
-			palette: rgb3level,
-			dithKern: "FloydSteinberg",
+			colors: 32,
+			palette: rgb6bit,
+//			dithKern: "FloydSteinberg",
+		});
+
+		var rgb6bit32 = [];
+		rgb6bit.forEach(function(rgb) {
+			rgb6bit32 = rgb6bit32.concat(rgb.concat(255));
 		});
 
 		window.onload = function() {
 			var img = document.getElementById("moo");
-			var thing = q.reduce(img);
+			console.time("quant");
+			q.sample(img);
+			var pal = q.palette();
+			var reduced = q.reduce(img);
+			console.timeEnd("quant");
+			putPixels(reduced, img.naturalWidth, img.naturalHeight);
 
+			document.body.appendChild(document.createElement("br"));
+			putPixels(rgb6bit32, 8, 8, "pal_orig");
+			putPixels(pal, 8, 8, "pal_final");
+		};
+
+		function putPixels(subpxArr, width, height, id) {
 			var can = document.createElement("canvas");
-			can.width = img.naturalWidth;
-			can.height = img.naturalHeight;
+			id && can.setAttribute("id", id);
+			can.width = width;
+			can.height = height;
 			var ctx = can.getContext("2d");
 			var imgd = ctx.createImageData(can.width,can.height);
-			imgd.data.set(thing);
+			imgd.data.set(subpxArr);
 			ctx.putImageData(imgd,0,0);
-
 			document.body.appendChild(can);
-		};
+		}
 	</script>
 </head>
 <body>
-	<img id="moo" src="img/photoman.jpg" alt="">
+	<img id="moo" src="img/baseball.jpg" alt="">
 </body>
 </html>
