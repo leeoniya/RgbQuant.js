@@ -150,7 +150,7 @@ function process(srcs) {
 			var rawTilBg;
 			ti.mark("raw tiles and background", function() {
 				rawTilBg = {
-					pallete: palRgb,
+					palette: palRgb,
 					mapW: Math.ceil(img.width / 8.0),
 					mapH: Math.ceil(img.height / 8.0),
 					tiles: [],
@@ -302,7 +302,7 @@ function process(srcs) {
 			});
 
 			ti.mark("tileset -> DOM", function() {
-				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.pallete);
+				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
 			});
 
 			var similarTiles;
@@ -311,7 +311,7 @@ function process(srcs) {
 					return {
 						tile: tile,
 						feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
-							return a.concat(rawTilBg.pallete[colorIndex]);
+							return a.concat(rawTilBg.palette[colorIndex]);
 						}, [])
 					};
 				});
@@ -365,7 +365,7 @@ function process(srcs) {
 						var offs = 0;
 						for (var tY = 0; tY != 8; tY++) {
 							for (var tX = 0; tX != 8; tX++) {
-								var rgb = rawTilBg.pallete[tile.pixels[tY][tX]];
+								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
 								var total = triplets[offs++];
 								total[0] += rgb[0];
 								total[1] += rgb[1];
@@ -406,7 +406,7 @@ function process(srcs) {
 					}
 				});
 			
-				displayTileset($tsets, newTiles, rawTilBg.pallete);
+				displayTileset($tsets, newTiles, rawTilBg.palette);
 				
 				rawTilBg.map = rawTilBg.map.map(function(line){
 					return line.map(function(cell){
@@ -425,7 +425,7 @@ function process(srcs) {
 			});
 			
 			ti.mark("raw map -> DOM", function() {
-				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.pallete);
+				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
 				image.drawMap(rawTilBg);
 				
 				var	ican = drawPixels(image.toRgbBytes(), image.width);
@@ -435,21 +435,21 @@ function process(srcs) {
 	});
 }
 
-function displayTileset($container, tiles, pallete) {
+function displayTileset($container, tiles, palette) {
 	$container.append($('<h5>').html(tiles.length + ' tiles'));
 
 	tiles.forEach(function(tile){
-		var image = new IndexedImage(8, 8, pallete);
+		var image = new IndexedImage(8, 8, palette);
 		image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
 		var	ican = drawPixels(image.toRgbBytes(), image.width);
 		$container.append(ican);
 	});
 }
 
-function IndexedImage(width, height, pallete, pixels) {
+function IndexedImage(width, height, palette, pixels) {
 	this.width = width;
 	this.height = height;
-	this.pallete = pallete;
+	this.palette = palette;
 	this.pixels = new Uint8Array(pixels || width * height) 
 }
 
@@ -458,7 +458,7 @@ IndexedImage.prototype.toRgbBytes = function() {
 	
 	var len = this.pixels.length;
 	for (var i = 0, j = 0; i != len; i++, j += 4) {
-		var rgb = this.pallete[this.pixels[i]];
+		var rgb = this.palette[this.pixels[i]];
 		img8[j] = rgb[0];
 		img8[j + 1] = rgb[1];
 		img8[j + 2] = rgb[2];
