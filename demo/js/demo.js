@@ -345,11 +345,65 @@ function process(srcs) {
 			
 			ti.mark("similar tiles -> DOM", function() {
 				var indexMap = [];
+				var allTriplets = [];
 				var newTiles = similarTiles.map(function(group, newTileNum){ 
+					var newTile = {
+						number: newTileNum,
+						flipX: group[0].flipX,
+						flipY: group[0].flipY,
+						pixels: []
+					};
+
+					var triplets = [];
+					for (var i = 0; i != 8 * 8; i++) {
+						triplets.push([0, 0, 0]);
+					}
+					
 					group.forEach(function(tile){
 						indexMap[tile.number] = newTileNum;
+						
+						var offs = 0;
+						for (var tY = 0; tY != 8; tY++) {
+							for (var tX = 0; tX != 8; tX++) {
+								var rgb = rawTilBg.pallete[tile.pixels[tY][tX]];
+								var total = triplets[offs++];
+								total[0] += rgb[0];
+								total[1] += rgb[1];
+								total[2] += rgb[2];
+							}
+						}						
 					});
-					return group[0];
+
+					triplets.forEach(function(rgb){
+						rgb[0] /= group.length;
+						rgb[1] /= group.length;
+						rgb[2] /= group.length;
+					});
+					allTriplets = allTriplets.concat(triplets);
+										
+					return newTile;
+				});
+				
+				var img8 = new Uint8Array(allTriplets.length * 4);
+				var iOfs = 0;
+				for (var tOfs = 0; tOfs != allTriplets.length; tOfs++) {
+					var rgb = allTriplets[tOfs];
+					for (var i = 0; i != 3; i++) {
+						img8[iOfs++] = rgb[i];
+					}
+					img8[iOfs++] = 0xFF;
+				}
+				
+				var img8i = quant.reduce(img8, 2);
+				var iOfs = 0;
+				newTiles.forEach(function(newTile){
+					for (var tY = 0; tY != 8; tY++) {
+						var pixelLine = [];
+						for (var tX = 0; tX != 8; tX++) {
+							pixelLine.push(img8i[iOfs++]);
+						}
+						newTile.pixels.push(pixelLine);
+					}
 				});
 			
 				displayTileset($tsets, newTiles, rawTilBg.pallete);
