@@ -316,10 +316,23 @@ function process(srcs) {
 					};
 				});
 				
-				var clusters = clusterfck.kmeans(_.pluck(data, 'feature'), 256);
+				var dataToClusterize = _.pluck(data, 'feature').map(function(featureVector){
+					var grays = [];
+					for (var i = 0; i != featureVector.length; i += 3) {
+						var r = featureVector[i];
+						var g = featureVector[i + 1];
+						var b = featureVector[i + 2];
+						var luma =  0.2126 * r + 0.7152 * g + 0.0722 * b;
+						grays.push(parseInt(luma));
+					}
+					
+					return featureVector.concat(grays);
+				});
+				
+				var clusters = clusterfck.kmeans(dataToClusterize, 256);
 				
 				function buildKey(featureVector) {
-					return featureVector.join(',');
+					return featureVector.slice(0, 8 * 8 * 3).join(',');
 				}
 				
 				var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
@@ -330,7 +343,6 @@ function process(srcs) {
 				});
 			});
 			
-			console.log(similarTiles);
 			ti.mark("similar tiles -> DOM", function() {
 				var indexMap = [];
 				var newTiles = similarTiles.map(function(group, newTileNum){ 
