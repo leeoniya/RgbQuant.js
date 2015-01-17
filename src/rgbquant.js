@@ -45,7 +45,7 @@
 		// accumulated histogram
 		this.histogram = {};
 		// palette - rgb triplets
-		this.idxrgb = [];
+		this.idxrgb = opts.palette || [];
 		// palette - int32 vals
 		this.idxi32 = [];
 		// reverse lookup {i32:idx}
@@ -54,6 +54,24 @@
 		this.i32i32 = {};
 		// {i32:rgb}
 		this.i32rgb = {};
+
+		// if pre-defined palette, build lookups
+		if (this.idxrgb.length > 0) {
+			var self = this;
+			this.idxrgb.forEach(function(rgb, i) {
+				var i32 =
+					(255    << 24) |	// alpha
+					(rgb[2] << 16) |	// blue
+					(rgb[1] <<  8) |	// green
+					 rgb[0];			// red
+
+				self.idxi32[i]		= i32;
+				self.i32idx[i32]	= i;
+				self.i32rgb[i32]	= rgb;
+			});
+
+			this.palLocked = true;
+		}
 	}
 
 	// gathers histogram info
@@ -82,6 +100,7 @@
 	};
 
 	// image quantizer
+	// todo: memoize colors here also
 	// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
 	RgbQuant.prototype.reduce = function reduce(img, retType, dithKern, dithSerp) {
 		if (!this.palLocked)
