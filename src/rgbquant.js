@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2013, Leon Sorokin
+* Copyright (c) 2015, Leon Sorokin
 * All rights reserved. (MIT Licensed)
 *
 * RgbQuant.js - an image quantization lib
@@ -45,32 +45,31 @@
 		// accumulated histogram
 		this.histogram = {};
 		// palette - rgb triplets
-		this.idxrgb = opts.palette || [];
+		this.idxrgb = opts.palette ? opts.palette.slice(0) : [];
 		// palette - int32 vals
 		this.idxi32 = [];
 		// reverse lookup {i32:idx}
 		this.i32idx = {};
-		// remap lookup {i32old:i32new}
-		this.i32i32 = {};
 		// {i32:rgb}
 		this.i32rgb = {};
+
+		this.cacheLimit = opts.cacheLimit || 2e5;
 
 		// if pre-defined palette, build lookups
 		if (this.idxrgb.length > 0) {
 			var self = this;
 			this.idxrgb.forEach(function(rgb, i) {
-				var i32 =
+				var i32 = (
 					(255    << 24) |	// alpha
 					(rgb[2] << 16) |	// blue
 					(rgb[1] <<  8) |	// green
-					 rgb[0];			// red
+					 rgb[0]				// red
+				) >>> 0;
 
 				self.idxi32[i]		= i32;
 				self.i32idx[i32]	= i;
 				self.i32rgb[i32]	= rgb;
 			});
-
-			this.palLocked = true;
 		}
 	}
 
@@ -309,7 +308,7 @@
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
 	RgbQuant.prototype.buildPal = function buildPal(noSort) {
-		if (this.palLocked) return;
+		if (this.palLocked || this.idxrgb.length > 0 && this.idxrgb.length <= this.colors) return;
 
 		var histG  = this.histogram,
 			sorted = sortedHashKeys(histG, true);
@@ -343,9 +342,13 @@
 		// int32-ify values
 		idxi32 = idxi32.map(function(v){return +v;});
 
+		var preDef = this.idxrgb.length > 0;
+
 		this.reducePal(idxi32);
-		if (!noSort)
+
+		if (!noSort && !preDef)
 			this.sortPal();
+
 		this.palLocked = true;
 	};
 
@@ -354,95 +357,121 @@
 		return tuples ? this.idxrgb : new Uint8Array((new Uint32Array(this.idxi32)).buffer);
 	};
 
+	RgbQuant.prototype.prunePal = function prunePal(keep) {
+		for (var j = 0; j < this.idxrgb.length; j++) {
+			if (!keep[j]) {
+				i32 = this.idxi32[j];
+				this.idxrgb[j] = null;
+				this.idxi32[j] = null;
+				this.i32idx[i32] = null;
+			}
+		}
+	};
+
 	// reduces similar colors from an importance-sorted Uint32 rgba array
 	RgbQuant.prototype.reducePal = function reducePal(idxi32) {
-		// build full rgb palette
-		var idxrgb = idxi32.map(function(i32) {
-			return [
-				(i32 & 0xff),
-				(i32 & 0xff00) >> 8,
-				(i32 & 0xff0000) >> 16,
-			];
-		});
+		// if pre-defined palette's length exceeds target
+		if (this.idxrgb.length > this.colors) {
+			// quantize histogram to existing palette
+			var len = idxi32.length, keep = {}, uniques = 0, idx, i32, pruned = false;
 
-		var len = idxrgb.length,
-			palLen = len,
-			i32i32 = {};
-			thold = this.initDist;
+			for (var i = 0; i < len; i++) {
+				// palette length reached, unset all remaining colors (sparse palette)
+				if (uniques == this.colors && !pruned) {
+					this.prunePal(keep);
+					pruned = true;
+				}
 
-		// palette already at or below desired length
-		if (palLen > this.colors) {
-			while (palLen > this.colors) {
-				var memDist = [];
+				idx = this.nearestIndex(idxi32[i]);
 
-				// iterate palette
-				for (var i = 0; i < len; i++) {
-					var pxi = idxrgb[i], i32i = idxi32[i];
-					if (!pxi) continue;
+				if (uniques < this.colors && !keep[idx]) {
+					keep[idx] = true;
+					uniques++;
+				}
+			}
 
-					for (var j = i + 1; j < len; j++) {
-						var pxj = idxrgb[j], i32j = idxi32[j];
-						if (!pxj) continue;
+			if (!pruned) {
+				this.prunePal(keep);
+				pruned = true;
+			}
+		}
+		// reduce histogram to create initial palette
+		else {
+			// build full rgb palette
+			var idxrgb = idxi32.map(function(i32) {
+				return [
+					(i32 & 0xff),
+					(i32 & 0xff00) >> 8,
+					(i32 & 0xff0000) >> 16,
+				];
+			});
 
-						var dist = colorDist(pxi, pxj);
+			var len = idxrgb.length,
+				palLen = len,
+				thold = this.initDist;
 
-						if (dist < thold) {
-							// store index,rgb,dist
-							memDist.push([j, pxj, i32j, dist]);
+			// palette already at or below desired length
+			if (palLen > this.colors) {
+				while (palLen > this.colors) {
+					var memDist = [];
 
-							// remap & kill squashed value
-							i32i32[i32j] = i32i;
-							delete(idxrgb[j]);
-							palLen--;
+					// iterate palette
+					for (var i = 0; i < len; i++) {
+						var pxi = idxrgb[i], i32i = idxi32[i];
+						if (!pxi) continue;
+
+						for (var j = i + 1; j < len; j++) {
+							var pxj = idxrgb[j], i32j = idxi32[j];
+							if (!pxj) continue;
+
+							var dist = colorDist(pxi, pxj);
+
+							if (dist < thold) {
+								// store index,rgb,dist
+								memDist.push([j, pxj, i32j, dist]);
+
+								// kill squashed value
+								delete(idxrgb[j]);
+								palLen--;
+							}
 						}
 					}
+
+					// palette reduction pass
+					// console.log("palette length: " + palLen);
+
+					// if palette is still much larger than target, increment by larger initDist
+					thold += (palLen > this.colors * 3) ? this.initDist : this.distIncr;
 				}
 
-				// palette reduction pass
-				// console.log("palette length: " + palLen);
+				// if palette is over-reduced, re-add removed colors with largest distances from last round
+				if (palLen < this.colors) {
+					// sort descending
+					sort.call(memDist, function(a,b) {
+						return b[3] - a[3];
+					});
 
-				// if palette is still much larger than target, increment by larger initDist
-				thold += (palLen > this.colors * 3) ? this.initDist : this.distIncr;
-			}
+					var k = 0;
+					while (palLen < this.colors) {
+						// re-inject rgb into final palette
+						idxrgb[memDist[k][0]] = memDist[k][1];
 
-			// if palette is over-reduced, re-add removed colors with largest distances from last round
-			if (palLen < this.colors) {
-				// sort descending
-				sort.call(memDist, function(a,b) {
-					return b[3] - a[3];
-				});
-
-				var k = 0;
-				while (palLen < this.colors) {
-					// re-inject rgb into final palette
-					idxrgb[memDist[k][0]] = memDist[k][1];
-
-					palLen++;
-					k++;
+						palLen++;
+						k++;
+					}
 				}
 			}
-		}
 
-		var len = idxrgb.length;
-		for (var i = 0; i < len; i++) {
-			if (!idxrgb[i]) continue;
+			var len = idxrgb.length;
+			for (var i = 0; i < len; i++) {
+				if (!idxrgb[i]) continue;
 
-			this.idxrgb.push(idxrgb[i]);
-			this.idxi32.push(idxi32[i]);
+				this.idxrgb.push(idxrgb[i]);
+				this.idxi32.push(idxi32[i]);
 
-			this.i32idx[idxi32[i]] = this.idxi32.length - 1;
-			this.i32i32[idxi32[i]] = idxi32[i];
-			this.i32rgb[idxi32[i]] = idxrgb[i];
-		}
-
-		// build cache
-		// TODO?: this caching should be based on freqHash (eg: all > 2, top 4096)
-		for (var i32 in i32i32) {
-			var idx = this.nearestIndex(i32);
-
-			this.i32idx[i32] = idx;
-			this.i32i32[i32] = this.idxi32[idx];
-			this.i32rgb[i32] = this.idxrgb[idx];
+				this.i32idx[idxi32[i]] = this.idxi32.length - 1;
+				this.i32rgb[idxi32[i]] = idxrgb[i];
+			}
 		}
 	};
 
@@ -556,8 +585,8 @@
 		if ((i32 & 0xff000000) >> 24 == 0)
 			return null;
 
-		var col = this.i32i32[i32];
-		if (col) return this.i32idx[col];
+		if (this.i32idx[i32])
+			return this.i32idx[i32];
 
 		var min = 1000,
 			idx,
@@ -569,6 +598,8 @@
 			len = this.idxrgb.length;
 
 		for (var i = 0; i < len; i++) {
+			if (!this.idxrgb[i]) continue;		// sparse palettes
+
 			var dist = colorDist(rgb, this.idxrgb[i]);
 
 			if (dist < min) {
@@ -577,7 +608,17 @@
 			}
 		}
 
+		this.cacheColor(i32, idx);
+
 		return idx;
+	};
+
+	var numCached = 0;
+
+	RgbQuant.prototype.cacheColor = function cacheColor(i32, idx) {
+		if (numCached == this.cacheLimit || this.i32idx[i32]) return;
+		this.i32idx[i32] = idx;
+		numCached++;
 	};
 
 	function HueStats(numGroups, minCols) {
