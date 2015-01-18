@@ -1,6 +1,7 @@
 RgbQuant-SMS.js
 -----------
-RgbQuant.js adapted for quantizing images for the Sega Master System hardware.
+
+This is a tool for converting an image to a palette+tileset+map compatible with the Sega Master System while keeping the number of tiles down to a predefined limit; it uses [RgbQuant.js] to reduce the number of colors, then it does the usual steps of dividing the image into tiles and removing the duplicates; finally, it uses [clusterfck]'s k-means implementation to group tiles by similarity, and uses that information for merging together tiles that are similar enough.
 
 *This is a work in progress*
 
@@ -13,3 +14,6 @@ TODO:
 - Allow the user to upload his/her own image for conversion: *Not started yet*;
 - Allow image resizing: *Not started yet*;
 - Implement command line support: *Not started yet*.
+
+[RgbQuant.js]: https://github.com/leeoniya/RgbQuant.js
+[clusterfck]: https://github.com/harthur/clusterfck
