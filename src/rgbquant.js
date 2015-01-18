@@ -80,18 +80,6 @@
 
 		var data = getImageData(img, width);
 
-		// Translates the colors to the SMS palette
-		var smsBuf = new Uint32Array(data.buf32);
-		var len = smsBuf.length;
-		for (var i = 0; i < len; i++) {
-			var col = smsBuf[i];
-			var r = col & 0xC0;
-			var g = (col & 0xC000) >> 8;
-			var b = (col & 0xC00000) >> 16;
-			smsBuf[i] = 0xFF000000 | (r * 0xFF / 0xC0) | (g * 0xFF / 0xC0) << 8 | (b * 0xFF / 0xC0) << 16;
-		}
-		data.buf32 = smsBuf;
-
 		switch (this.method) {
 			case 1: this.colorStats1D(data.buf32); break;
 			case 2: this.colorStats2D(data.buf32, data.width); break;
