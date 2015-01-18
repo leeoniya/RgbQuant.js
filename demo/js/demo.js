@@ -182,6 +182,7 @@ function process(srcs) {
 					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
 						var tile = {
 							number: rawTilBg.tiles.length,
+							popularity: 1,
 							flipX: false,
 							flipY: false,
 							pixels: [
@@ -226,6 +227,7 @@ function process(srcs) {
 			function copyTileFlipX(orig) {
 				return {
 					number: orig.number,
+					popularity: orig.popularity,
 					flipX: !orig.flipX,
 					flipY: orig.flipY,
 					pixels: orig.pixels.map(function(line){
@@ -237,6 +239,7 @@ function process(srcs) {
 			function copyTileFlipY(orig) {
 				return {
 					number: orig.number,
+					popularity: orig.popularity,
 					flipX: orig.flipX,
 					flipY: !orig.flipY,
 					pixels: orig.pixels.slice().reverse()
@@ -288,6 +291,8 @@ function process(srcs) {
 					var newTileNum;
 					if (key in newIndexes) {
 						newTileNum = newIndexes[key];
+						var newTile = newTiles[newTileNum];
+						newTile.popularity += tile.popularity;
 					} else {
 						newTileNum = newTiles.length;
 						newIndexes[key] = newTileNum;
@@ -363,6 +368,7 @@ function process(srcs) {
 				var newTiles = similarTiles.map(function(group, newTileNum){ 
 					var newTile = {
 						number: newTileNum,
+						popularity: 0,
 						flipX: group[0].flipX,
 						flipY: group[0].flipY,
 						pixels: []
@@ -375,23 +381,24 @@ function process(srcs) {
 					
 					group.forEach(function(tile){
 						indexMap[tile.number] = newTileNum;
+						newTile.popularity += tile.popularity;
 						
 						var offs = 0;
 						for (var tY = 0; tY != 8; tY++) {
 							for (var tX = 0; tX != 8; tX++) {
 								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
 								var total = triplets[offs++];
-								total[0] += rgb[0];
-								total[1] += rgb[1];
-								total[2] += rgb[2];
+								total[0] += rgb[0] * tile.popularity;
+								total[1] += rgb[1] * tile.popularity;
+								total[2] += rgb[2] * tile.popularity;
 							}
 						}						
-					});
+					});									
 
 					triplets.forEach(function(rgb){
-						rgb[0] /= group.length;
-						rgb[1] /= group.length;
-						rgb[2] /= group.length;
+						for (var ch = 0; ch != 3; ch++) {
+							rgb[ch] /= newTile.popularity;
+						}
 					});
 					allTriplets = allTriplets.concat(triplets);
 										
