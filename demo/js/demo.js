@@ -104,28 +104,37 @@ function process(srcs) {
 			});
 		});
 
-		var pal8;
-		ti.mark("build palette", function() {
-			pal8 = quant.palette();
-		});
-
 		var palRgb;
 		ti.mark("build RGB palette", function() {
-			palRgb = quant.palette(true);
+			palRgb = quant.palette();
 		});
 		
-		var pcan = drawPixels(pal8, 16, 128);
+		ti.mark("Display palette", function() {
+			var pal8 = new Uint8Array(palRgb.length * 4);			
+			var offs = 0;
+			palRgb.forEach(function(entry){
+				entry = entry || [0, 0, 0];
+				// R, G, B
+				pal8[offs++] = entry[0];
+				pal8[offs++] = entry[1];
+				pal8[offs++] = entry[2];
+				// Alpha
+				pal8[offs++] = 0xFF;
+			});
 
-		var plabel = $('<div>').addClass('pal-numbers').html(quant.palette(true).map(function(color){
-			if (!color) {
-				return '*';
-			}
-		
-			var n = (color[0] & 0xC0) >> 6 | (color[1] & 0xC0) >> 4 | (color[2] & 0xC0) >> 2;
-			return ('00' + n.toString(16)).substr(-2);
-		}).join(' '));
-		
-		$palt.empty().append(pcan).append(plabel);
+			var pcan = drawPixels(pal8, 16, 128);
+
+			var plabel = $('<div>').addClass('pal-numbers').html(palRgb.map(function(color){
+				if (!color) {
+					return '*';
+				}
+			
+				var n = (color[0] & 0xC0) >> 6 | (color[1] & 0xC0) >> 4 | (color[2] & 0xC0) >> 2;
+				return ('00' + n.toString(16)).substr(-2);
+			}).join(' '));
+			
+			$palt.empty().append(pcan).append(plabel);
+		});
 
 		$redu.empty();
 		$tsetd.empty();
