@@ -143,12 +143,10 @@ function process(srcs) {
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
-			var img8i;
+			var indexedImage;
 			ti.mark("reduce '" + id + "'", function() {
-				img8i = quant.reduce(img, 2);
+				indexedImage = quant.reduce(img, 8);
 			});
-			
-			var indexedImage = new IndexedImage(img.width, img.height, palRgb, img8i);
 			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
@@ -163,182 +161,22 @@ function process(srcs) {
 			// Generates the unoptimized tileset + map
 			var rawTilBg;
 			ti.mark("raw tiles and background", function() {
-				rawTilBg = {
-					palette: palRgb,
-					mapW: Math.ceil(img.width / 8.0),
-					mapH: Math.ceil(img.height / 8.0),
-					tiles: [],
-					map: []
-				};
-				
-				for (var mY = 0; mY != rawTilBg.mapH; mY++) {
-					var iY = mY * 8;
-					var maxY = Math.min(iY + 8, img.height);
-					var yOffs = iY * img.width;
-					
-					var mapLine = [];
-					rawTilBg.map[mY] = mapLine;
-					
-					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
-						var tile = {
-							number: rawTilBg.tiles.length,
-							popularity: 1,
-							entropy: 0,
-							flipX: false,
-							flipY: false,
-							pixels: [
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0]
-							]
-						};						
-						rawTilBg.tiles.push(tile);
-
-						// Copíes pixels from the image into the tile
-						var iX = mX * 8;
-						var maxX = Math.min(iX + 8, img.width);
-						var xyOffs = yOffs + iX;
-						
-						var lineOffs = xyOffs;						
-						for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
-							var tileLine = tile.pixels[pY];
-							for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
-								tileLine[pX] = img8i[lineOffs + pX];
-							}
-							lineOffs += img.width;
-						}				
-						
-						// Makes the current map slot point to the tile
-						mapLine[mX] = {
-							flipX: false,
-							flipY: false,
-							tileNum: tile.number
-						};
-					}
-				}
+				rawTilBg = quant.toTileMap(indexedImage);
 			});			
 			
 			console.log("Raw map", rawTilBg);
 			
-			function copyTileFlipX(orig) {
-				return {
-					number: orig.number,
-					popularity: orig.popularity,
-					entropy: 0,
-					flipX: !orig.flipX,
-					flipY: orig.flipY,
-					pixels: orig.pixels.map(function(line){
-						return line.slice().reverse();
-					})
-				}
-			}
-
-			function copyTileFlipY(orig) {
-				return {
-					number: orig.number,
-					popularity: orig.popularity,
-					entropy: 0,
-					flipX: orig.flipX,
-					flipY: !orig.flipY,
-					pixels: orig.pixels.slice().reverse()
-				}
-			}
-			
-			function compTilePixels(a, b) {
-				for (var tY = 0; tY != 8; tY++) {
-					var aLin = a.pixels[tY];
-					var bLin = b.pixels[tY];
-					for (var tX = 0; tX != 8; tX++) {
-						var diff = aLin[tX] - bLin[tX];
-						if (diff) {
-							// They're different; returns a positive or negative value to indicate the order
-							return diff;
-						}
-					}
-				}
-				
-				// They're identical
-				return 0; 
-			}
-			
-			function tileKey(tile) {
-				return tile.pixels.map(function(line){ return line.join(',') }).join(';');
-			}
-			
-			function boolXor(a, b) {
-				return !a != !b;
-			}
-
 			ti.mark("normalize tiles", function() {
-				rawTilBg.tiles = rawTilBg.tiles.map(function(tile){
-					var orig = tile,
-						flipX = copyTileFlipX(tile),
-						flipY = copyTileFlipY(tile),
-						flipXY = copyTileFlipY(flipX);
-					return [orig, flipX, flipY, flipXY].reduce(function(a, b){
-						return compTilePixels(a, b) > 0 ? b : a;
-					});
-				});
+				rawTilBg = quant.normalizeTiles(rawTilBg);
 			});
 
 			ti.mark("remove duplicate tiles", function() {
-				var newTiles = [];
-				var newIndexes = {};
-				var indexMap = rawTilBg.tiles.map(function(tile){
-					var key = tileKey(tile);
-					var newTileNum;
-					if (key in newIndexes) {
-						newTileNum = newIndexes[key];
-						var newTile = newTiles[newTileNum];
-						newTile.popularity += tile.popularity;
-					} else {
-						newTileNum = newTiles.length;
-						newIndexes[key] = newTileNum;
-						
-						tile.number = newTileNum;
-						newTiles.push(tile);
-					}
-					
-					return newTileNum;
-				});
-				
-				rawTilBg.map = rawTilBg.map.map(function(line){
-					return line.map(function(cell){
-						var newTileNum = indexMap[cell.tileNum];
-						var origTile = rawTilBg.tiles[cell.tileNum];
-						var newTile = newTiles[newTileNum];
-						
-						return {
-							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
-							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
-							tileNum: newTileNum
-						}
-					});
-				});
-				rawTilBg.tiles = newTiles;
+				rawTilBg = quant.removeDuplicateTiles(rawTilBg);
 			});
 
 			ti.mark("Calculate tile entropy", function() {
-				rawTilBg.tiles.forEach(function(tile){
-					var tileHistogram = _.flatten(tile.pixels).reduce(function(h, px){
-						h[px] = (h[px] || 0) + 1;
-						return h;
-					}, []);
-					
-					tile.entropy = - tileHistogram.reduce(function(total, cnt){
-						var p = (cnt || 0) / (8 * 8);
-						var colorEntropy = p * Math.log2(p);
-						return total + colorEntropy;
-					}, 0);
-				});
+				quant.updateTileEntropy(rawTilBg.tiles);
 			});
-			
-			console.log('Entropies', _.pluck(rawTilBg.tiles, 'entropy'));
 			
 			ti.mark("tileset -> DOM", function() {
 				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
@@ -346,133 +184,17 @@ function process(srcs) {
 
 			var similarTiles;
 			ti.mark("clusterize", function() {
-				var data = rawTilBg.tiles.map(function(tile){
-					return {
-						tile: tile,
-						feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
-							return a.concat(rawTilBg.palette[colorIndex]);
-						}, [])
-					};
-				});
-				
-				var dataToClusterize = _.pluck(data, 'feature').map(function(featureVector){
-					var grays = [];
-					for (var i = 0; i != featureVector.length; i += 3) {
-						var r = featureVector[i];
-						var g = featureVector[i + 1];
-						var b = featureVector[i + 2];
-						var luma =  0.2126 * r + 0.7152 * g + 0.0722 * b;
-						grays.push(parseInt(luma));
-					}
-					
-					return featureVector.concat(grays);
-				});
-				
-				var clusters = clusterfck.kmeans(dataToClusterize, 256);
-				
-				function buildKey(featureVector) {
-					return featureVector.slice(0, 8 * 8 * 3).join(',');
-				}
-				
-				var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
-				similarTiles = clusters.map(function(group){
-					return group.map(function(feature){
-						return index[buildKey(feature)].tile;
-					});
-				});
+				similarTiles = quant.groupBySimilarity(rawTilBg);
 			});
 			
 			ti.mark("similar tiles -> DOM", function() {
-				var indexMap = [];
-				var allTriplets = [];
-				var newTiles = similarTiles.map(function(group, newTileNum){ 
-					var newTile = {
-						number: newTileNum,
-						popularity: 0,
-						entropy: 0,
-						flipX: group[0].flipX,
-						flipY: group[0].flipY,
-						pixels: []
-					};
-
-					var triplets = [];
-					for (var i = 0; i != 8 * 8; i++) {
-						triplets.push([0, 0, 0]);
-					}
-					
-					var totalWeight = 0;
-					
-					group.forEach(function(tile){
-						indexMap[tile.number] = newTileNum;
-						newTile.popularity += tile.popularity;
-						
-						var weight = tile.popularity * (tile.entropy + 1);
-						totalWeight += weight;
-						
-						var offs = 0;
-						for (var tY = 0; tY != 8; tY++) {
-							for (var tX = 0; tX != 8; tX++) {
-								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
-								var total = triplets[offs++];
-								total[0] += rgb[0] * weight;
-								total[1] += rgb[1] * weight;
-								total[2] += rgb[2] * weight;
-							}
-						}						
-					});									
-
-					triplets.forEach(function(rgb){
-						for (var ch = 0; ch != 3; ch++) {
-							rgb[ch] /= totalWeight;
-						}
-					});
-					allTriplets = allTriplets.concat(triplets);
-										
-					return newTile;
-				});
-				
-				var img8 = new Uint8Array(allTriplets.length * 4);
-				var iOfs = 0;
-				for (var tOfs = 0; tOfs != allTriplets.length; tOfs++) {
-					var rgb = allTriplets[tOfs];
-					for (var i = 0; i != 3; i++) {
-						img8[iOfs++] = rgb[i];
-					}
-					img8[iOfs++] = 0xFF;
-				}
-				
-				var img8i = quant.reduce(img8, 2);
-				var iOfs = 0;
-				newTiles.forEach(function(newTile){
-					for (var tY = 0; tY != 8; tY++) {
-						var pixelLine = [];
-						for (var tX = 0; tX != 8; tX++) {
-							pixelLine.push(img8i[iOfs++]);
-						}
-						newTile.pixels.push(pixelLine);
-					}
-				});
-			
-				displayTileset($tsets, newTiles, rawTilBg.palette);
-				
-				rawTilBg.map = rawTilBg.map.map(function(line){
-					return line.map(function(cell){
-						var newTileNum = indexMap[cell.tileNum];
-						var origTile = rawTilBg.tiles[cell.tileNum];
-						var newTile = newTiles[newTileNum];
-						
-						return {
-							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
-							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
-							tileNum: newTileNum
-						}
-					});
-				});
-				rawTilBg.tiles = newTiles;
+				rawTilBg = quant.removeSimilarTiles(rawTilBg, similarTiles);
 			});
+
+			displayTileset($tsets, rawTilBg.tiles, rawTilBg.palette);
 			
 			ti.mark("raw map -> DOM", function() {
-				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
+				var image = new RgbQuantSMS.IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
 				image.drawMap(rawTilBg);
 				
 				var	ican = drawPixels(image.toRgbBytes(), image.width);
@@ -486,60 +208,13 @@ function displayTileset($container, tiles, palette) {
 	$container.append($('<h5>').html(tiles.length + ' tiles'));
 
 	tiles.forEach(function(tile){
-		var image = new IndexedImage(8, 8, palette);
+		var image = new RgbQuantSMS.IndexedImage(8, 8, palette);
 		image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
 		var	ican = drawPixels(image.toRgbBytes(), image.width);
 		$container.append(ican);
 	});
 }
 
-function IndexedImage(width, height, palette, pixels) {
-	this.width = width;
-	this.height = height;
-	this.palette = palette;
-	this.pixels = new Uint8Array(pixels || width * height) 
-}
-
-IndexedImage.prototype.toRgbBytes = function() {
-	var img8 = new Uint8Array(this.pixels.length * 4);
-	
-	var len = this.pixels.length;
-	for (var i = 0, j = 0; i != len; i++, j += 4) {
-		var rgb = this.palette[this.pixels[i]];
-		img8[j] = rgb[0];
-		img8[j + 1] = rgb[1];
-		img8[j + 2] = rgb[2];
-		img8[j + 3] = 0xFF;
-	}
-	
-	return img8;
-}
-
-IndexedImage.prototype.drawTile = function(tile, x, y, flipX, flipY) {
-	var flipX = tile.flipX ? !flipX : flipX;
-	var flipY = tile.flipY ? !flipY : flipY;
-
-	var offs = y * this.width + x;	
-	
-	for (var tY = 0; tY != 8; tY++) {
-		var tileLine = tile.pixels[flipY ? 7 - tY : tY];
-		var yOffs = offs + tY * this.width
-		for (var tX = 0; tX != 8; tX++) {
-			this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
-		}
-	}
-}
-
-IndexedImage.prototype.drawMap = function(map) {
-	for (var mY = 0; mY != map.mapH; mY++) {
-		var mapLine = map.map[mY];
-		for (var mX = 0; mX != map.mapW; mX++) {
-			var mapCell = mapLine[mX];
-			var tile = map.tiles[mapCell.tileNum];
-			this.drawTile(tile, mX * 8, mY * 8, mapCell.flipX, mapCell.flipY);
-		}
-	}
-}
 
 $(document).on("click", "img.th", function() {
 	cfg_edited = false;
