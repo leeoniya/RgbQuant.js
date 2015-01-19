@@ -183,6 +183,7 @@ function process(srcs) {
 						var tile = {
 							number: rawTilBg.tiles.length,
 							popularity: 1,
+							entropy: 0,
 							flipX: false,
 							flipY: false,
 							pixels: [
@@ -210,7 +211,7 @@ function process(srcs) {
 								tileLine[pX] = img8i[lineOffs + pX];
 							}
 							lineOffs += img.width;
-						}						
+						}				
 						
 						// Makes the current map slot point to the tile
 						mapLine[mX] = {
@@ -228,6 +229,7 @@ function process(srcs) {
 				return {
 					number: orig.number,
 					popularity: orig.popularity,
+					entropy: 0,
 					flipX: !orig.flipX,
 					flipY: orig.flipY,
 					pixels: orig.pixels.map(function(line){
@@ -240,6 +242,7 @@ function process(srcs) {
 				return {
 					number: orig.number,
 					popularity: orig.popularity,
+					entropy: 0,
 					flipX: orig.flipX,
 					flipY: !orig.flipY,
 					pixels: orig.pixels.slice().reverse()
@@ -320,6 +323,23 @@ function process(srcs) {
 				rawTilBg.tiles = newTiles;
 			});
 
+			ti.mark("Calculate tile entropy", function() {
+				rawTilBg.tiles.forEach(function(tile){
+					var tileHistogram = _.flatten(tile.pixels).reduce(function(h, px){
+						h[px] = (h[px] || 0) + 1;
+						return h;
+					}, []);
+					
+					tile.entropy = - tileHistogram.reduce(function(total, cnt){
+						var p = (cnt || 0) / (8 * 8);
+						var colorEntropy = p * Math.log2(p);
+						return total + colorEntropy;
+					}, 0);
+				});
+			});
+			
+			console.log('Entropies', _.pluck(rawTilBg.tiles, 'entropy'));
+			
 			ti.mark("tileset -> DOM", function() {
 				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
 			});
@@ -369,6 +389,7 @@ function process(srcs) {
 					var newTile = {
 						number: newTileNum,
 						popularity: 0,
+						entropy: 0,
 						flipX: group[0].flipX,
 						flipY: group[0].flipY,
 						pixels: []
@@ -379,25 +400,30 @@ function process(srcs) {
 						triplets.push([0, 0, 0]);
 					}
 					
+					var totalWeight = 0;
+					
 					group.forEach(function(tile){
 						indexMap[tile.number] = newTileNum;
 						newTile.popularity += tile.popularity;
+						
+						var weight = tile.popularity * (tile.entropy + 1);
+						totalWeight += weight;
 						
 						var offs = 0;
 						for (var tY = 0; tY != 8; tY++) {
 							for (var tX = 0; tX != 8; tX++) {
 								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
 								var total = triplets[offs++];
-								total[0] += rgb[0] * tile.popularity;
-								total[1] += rgb[1] * tile.popularity;
-								total[2] += rgb[2] * tile.popularity;
+								total[0] += rgb[0] * weight;
+								total[1] += rgb[1] * weight;
+								total[2] += rgb[2] * weight;
 							}
 						}						
 					});									
 
 					triplets.forEach(function(rgb){
 						for (var ch = 0; ch != 3; ch++) {
-							rgb[ch] /= newTile.popularity;
+							rgb[ch] /= totalWeight;
 						}
 					});
 					allTriplets = allTriplets.concat(triplets);
