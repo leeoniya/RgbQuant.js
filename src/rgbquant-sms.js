@@ -220,6 +220,21 @@
 			map: newMap
 		};
 	}
+
+	RgbQuantSMS.prototype.updateTileEntropy = function(tileSet) {
+		tileSet.forEach(function(tile){
+			var tileHistogram = _.flatten(tile.pixels).reduce(function(h, px){
+				h[px] = (h[px] || 0) + 1;
+				return h;
+			}, []);
+			
+			tile.entropy = - tileHistogram.reduce(function(total, cnt){
+				var p = (cnt || 0) / (8 * 8);
+				var colorEntropy = p * Math.log2(p);
+				return total + colorEntropy;
+			}, 0);
+		});
+	}
 	
 	
 	//-------------------
