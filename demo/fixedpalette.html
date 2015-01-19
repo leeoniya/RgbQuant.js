@@ -137,7 +137,9 @@
 		var q = new RgbQuant({
 			colors: 16,
 			palette: rgb6bit,
-//			dithKern: "FloydSteinberg",
+			reIndex: true,
+			dithKern: "FloydSteinberg",
+			dithDelta: 0.05,
 		});
 
 		var rgb6bit32 = [];
@@ -174,5 +176,7 @@
 </head>
 <body>
 	<img id="moo" src="img/baseball.jpg" alt="">
+<!--<img id="moo" src="img/mario.png" alt="">-->
+<!--<img id="moo" src="img/bluff.jpg" alt="">-->
 </body>
 </html>
