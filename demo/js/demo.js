@@ -166,66 +166,18 @@ function process(srcs) {
 			
 			console.log("Raw map", rawTilBg);
 			
-			function copyTileFlipX(orig) {
-				return {
-					number: orig.number,
-					popularity: orig.popularity,
-					entropy: 0,
-					flipX: !orig.flipX,
-					flipY: orig.flipY,
-					pixels: orig.pixels.map(function(line){
-						return line.slice().reverse();
-					})
-				}
-			}
+			ti.mark("normalize tiles", function() {
+				rawTilBg = quant.normalizeTiles(rawTilBg);
+			});
 
-			function copyTileFlipY(orig) {
-				return {
-					number: orig.number,
-					popularity: orig.popularity,
-					entropy: 0,
-					flipX: orig.flipX,
-					flipY: !orig.flipY,
-					pixels: orig.pixels.slice().reverse()
-				}
-			}
-			
-			function compTilePixels(a, b) {
-				for (var tY = 0; tY != 8; tY++) {
-					var aLin = a.pixels[tY];
-					var bLin = b.pixels[tY];
-					for (var tX = 0; tX != 8; tX++) {
-						var diff = aLin[tX] - bLin[tX];
-						if (diff) {
-							// They're different; returns a positive or negative value to indicate the order
-							return diff;
-						}
-					}
-				}
-				
-				// They're identical
-				return 0; 
-			}
-			
+		
 			function tileKey(tile) {
 				return tile.pixels.map(function(line){ return line.join(',') }).join(';');
 			}
-			
+
 			function boolXor(a, b) {
 				return !a != !b;
 			}
-
-			ti.mark("normalize tiles", function() {
-				rawTilBg.tiles = rawTilBg.tiles.map(function(tile){
-					var orig = tile,
-						flipX = copyTileFlipX(tile),
-						flipY = copyTileFlipY(tile),
-						flipXY = copyTileFlipY(flipX);
-					return [orig, flipX, flipY, flipXY].reduce(function(a, b){
-						return compTilePixels(a, b) > 0 ? b : a;
-					});
-				});
-			});
 
 			ti.mark("remove duplicate tiles", function() {
 				var newTiles = [];
