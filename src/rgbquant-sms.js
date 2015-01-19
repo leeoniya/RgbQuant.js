@@ -113,19 +113,7 @@
 	}
 
 	RgbQuantSMS.prototype.normalizeTiles = function(tileMap) {
-		function copyTile(orig) {
-			return {
-				number: orig.number,
-				popularity: orig.popularity,
-				entropy: 0,
-				flipX: orig.flipX,
-				flipY: orig.flipY,
-				pixels: orig.pixels.map(function(line){
-					return line.slice();
-				})
-			}
-		}
-		
+	
 		function copyTileFlipX(orig) {
 			return {
 				number: orig.number,
@@ -187,6 +175,51 @@
 			})
 		};
 	}
+
+	RgbQuantSMS.prototype.removeDuplicateTiles = function(tileMap) {
+		var newTiles = [];
+		var newIndexes = {};
+		var indexMap = tileMap.tiles.map(function(tile){
+			var key = tileKey(tile);
+			var newTileNum;
+			if (key in newIndexes) {
+				newTileNum = newIndexes[key];
+				var newTile = newTiles[newTileNum];
+				newTile.popularity += tile.popularity;
+			} else {
+				newTileNum = newTiles.length;
+				var newTile = copyTile(tile);
+				newIndexes[key] = newTileNum;
+				
+				newTile.number = newTileNum;
+				newTiles.push(newTile);
+			}
+			
+			return newTileNum;
+		});
+				
+		var newMap = tileMap.map.map(function(line){
+			return line.map(function(cell){
+				var newTileNum = indexMap[cell.tileNum];
+				var origTile = tileMap.tiles[cell.tileNum];
+				var newTile = newTiles[newTileNum];
+				
+				return {
+					flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
+					flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
+					tileNum: newTileNum
+				}
+			});
+		});
+
+		return {
+			palette: tileMap.palette,
+			mapW: tileMap.mapW,
+			mapH: tileMap.mapH,
+			tiles: newTiles,
+			map: newMap
+		};
+	}
 	
 	
 	//-------------------
@@ -246,6 +279,27 @@
 	
 	//-------------------
 	
+
+	function copyTile(orig) {
+		return {
+			number: orig.number,
+			popularity: orig.popularity,
+			entropy: orig.entropy,
+			flipX: orig.flipX,
+			flipY: orig.flipY,
+			pixels: orig.pixels.map(function(line){
+				return line.slice();
+			})
+		}
+	}
+	
+	function tileKey(tile) {
+		return tile.pixels.map(function(line){ return line.join(',') }).join(';');
+	}
+
+	function boolXor(a, b) {
+		return !a != !b;
+	}
 
 	function doRgbPal(levels) {
 		var palette = [];

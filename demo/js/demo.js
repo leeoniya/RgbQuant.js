@@ -180,40 +180,7 @@ function process(srcs) {
 			}
 
 			ti.mark("remove duplicate tiles", function() {
-				var newTiles = [];
-				var newIndexes = {};
-				var indexMap = rawTilBg.tiles.map(function(tile){
-					var key = tileKey(tile);
-					var newTileNum;
-					if (key in newIndexes) {
-						newTileNum = newIndexes[key];
-						var newTile = newTiles[newTileNum];
-						newTile.popularity += tile.popularity;
-					} else {
-						newTileNum = newTiles.length;
-						newIndexes[key] = newTileNum;
-						
-						tile.number = newTileNum;
-						newTiles.push(tile);
-					}
-					
-					return newTileNum;
-				});
-				
-				rawTilBg.map = rawTilBg.map.map(function(line){
-					return line.map(function(cell){
-						var newTileNum = indexMap[cell.tileNum];
-						var origTile = rawTilBg.tiles[cell.tileNum];
-						var newTile = newTiles[newTileNum];
-						
-						return {
-							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
-							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
-							tileNum: newTileNum
-						}
-					});
-				});
-				rawTilBg.tiles = newTiles;
+				rawTilBg = quant.removeDuplicateTiles(rawTilBg);
 			});
 
 			ti.mark("Calculate tile entropy", function() {
