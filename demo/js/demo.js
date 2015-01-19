@@ -161,64 +161,7 @@ function process(srcs) {
 			// Generates the unoptimized tileset + map
 			var rawTilBg;
 			ti.mark("raw tiles and background", function() {
-				rawTilBg = {
-					palette: palRgb,
-					mapW: Math.ceil(img.width / 8.0),
-					mapH: Math.ceil(img.height / 8.0),
-					tiles: [],
-					map: []
-				};
-				
-				for (var mY = 0; mY != rawTilBg.mapH; mY++) {
-					var iY = mY * 8;
-					var maxY = Math.min(iY + 8, img.height);
-					var yOffs = iY * img.width;
-					
-					var mapLine = [];
-					rawTilBg.map[mY] = mapLine;
-					
-					for (var mX = 0; mX != rawTilBg.mapW; mX++) {
-						var tile = {
-							number: rawTilBg.tiles.length,
-							popularity: 1,
-							entropy: 0,
-							flipX: false,
-							flipY: false,
-							pixels: [
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0],
-								[0,0,0,0,0,0,0,0]
-							]
-						};						
-						rawTilBg.tiles.push(tile);
-
-						// Copíes pixels from the image into the tile
-						var iX = mX * 8;
-						var maxX = Math.min(iX + 8, img.width);
-						var xyOffs = yOffs + iX;
-						
-						var lineOffs = xyOffs;						
-						for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
-							var tileLine = tile.pixels[pY];
-							for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
-								tileLine[pX] = indexedImage.pixels[lineOffs + pX];
-							}
-							lineOffs += img.width;
-						}				
-						
-						// Makes the current map slot point to the tile
-						mapLine[mX] = {
-							flipX: false,
-							flipY: false,
-							tileNum: tile.number
-						};
-					}
-				}
+				rawTilBg = quant.toTileMap(indexedImage);
 			});			
 			
 			console.log("Raw map", rawTilBg);

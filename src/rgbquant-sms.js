@@ -46,6 +46,72 @@
 		return this.quant.palette(true);
 	}
 	
+	/**
+	 * Split an indexed image into a tileset+map (no optimization here)
+	 */
+	RgbQuantSMS.prototype.toTileMap = function(indexedImage) {
+		var tileMap = {
+			palette: indexedImage.palette,
+			mapW: Math.ceil(indexedImage.width / 8.0),
+			mapH: Math.ceil(indexedImage.height / 8.0),
+			tiles: [],
+			map: []
+		};
+		
+		for (var mY = 0; mY != tileMap.mapH; mY++) {
+			var iY = mY * 8;
+			var maxY = Math.min(iY + 8, indexedImage.height);
+			var yOffs = iY * indexedImage.width;
+			
+			var mapLine = [];
+			tileMap.map[mY] = mapLine;
+			
+			for (var mX = 0; mX != tileMap.mapW; mX++) {
+				var tile = {
+					number: tileMap.tiles.length,
+					popularity: 1,
+					entropy: 0,
+					flipX: false,
+					flipY: false,
+					pixels: [
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0],
+						[0,0,0,0,0,0,0,0]
+					]
+				};						
+				tileMap.tiles.push(tile);
+
+				// Copíes pixels from the image into the tile
+				var iX = mX * 8;
+				var maxX = Math.min(iX + 8, indexedImage.width);
+				var xyOffs = yOffs + iX;
+				
+				var lineOffs = xyOffs;						
+				for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
+					var tileLine = tile.pixels[pY];
+					for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
+						tileLine[pX] = indexedImage.pixels[lineOffs + pX];
+					}
+					lineOffs += indexedImage.width;
+				}				
+				
+				// Makes the current map slot point to the tile
+				mapLine[mX] = {
+					flipX: false,
+					flipY: false,
+					tileNum: tile.number
+				};
+			}
+		}
+		
+		return tileMap;
+	}
+	
 	
 	//-------------------
 	
