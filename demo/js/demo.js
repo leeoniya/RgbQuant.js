@@ -183,6 +183,7 @@ function process(srcs) {
 						var tile = {
 							number: rawTilBg.tiles.length,
 							popularity: 1,
+							entropy: 0,
 							flipX: false,
 							flipY: false,
 							pixels: [
@@ -210,7 +211,7 @@ function process(srcs) {
 								tileLine[pX] = img8i[lineOffs + pX];
 							}
 							lineOffs += img.width;
-						}						
+						}				
 						
 						// Makes the current map slot point to the tile
 						mapLine[mX] = {
@@ -228,6 +229,7 @@ function process(srcs) {
 				return {
 					number: orig.number,
 					popularity: orig.popularity,
+					entropy: 0,
 					flipX: !orig.flipX,
 					flipY: orig.flipY,
 					pixels: orig.pixels.map(function(line){
@@ -240,6 +242,7 @@ function process(srcs) {
 				return {
 					number: orig.number,
 					popularity: orig.popularity,
+					entropy: 0,
 					flipX: orig.flipX,
 					flipY: !orig.flipY,
 					pixels: orig.pixels.slice().reverse()
@@ -320,6 +323,23 @@ function process(srcs) {
 				rawTilBg.tiles = newTiles;
 			});
 
+			ti.mark("Calculate tile entropy", function() {
+				rawTilBg.tiles.forEach(function(tile){
+					var tileHistogram = _.flatten(tile.pixels).reduce(function(h, px){
+						h[px] = (h[px] || 0) + 1;
+						return h;
+					}, []);
+					
+					tile.entropy = - tileHistogram.reduce(function(total, cnt){
+						var p = (cnt || 0) / (8 * 8);
+						var colorEntropy = p * Math.log2(p);
+						return total + colorEntropy;
+					}, 0);
+				});
+			});
+			
+			console.log('Entropies', _.pluck(rawTilBg.tiles, 'entropy'));
+			
 			ti.mark("tileset -> DOM", function() {
 				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
 			});
