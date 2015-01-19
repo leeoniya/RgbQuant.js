@@ -406,7 +406,7 @@ function process(srcs) {
 						indexMap[tile.number] = newTileNum;
 						newTile.popularity += tile.popularity;
 						
-						var weight = tile.popularity;
+						var weight = tile.popularity * tile.entropy;
 						totalWeight += weight;
 						
 						var offs = 0;
