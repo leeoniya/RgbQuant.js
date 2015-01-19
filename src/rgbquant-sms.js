@@ -10,6 +10,8 @@
 		opts = opts || {};
 		
 		opts.palette = PREDEFINED_PALETTES.SegaMasterSystem;
+		opts.reIndex = true;
+		opts.dithDelta = 0.05;
 		
 		this.quant = new RgbQuant(opts);
 	}
@@ -25,37 +27,14 @@
 	 * Image quantizer
 	 */
 	RgbQuantSMS.prototype.reduce = function(img, retType, dithKern, dithSerp) {
-		this.palette();
-		var pixelIndexes = this.quant.reduce(img, retType, dithKern, dithSerp);
-		
-		for (var i = 0; i != pixelIndexes.length; i++) {
-			pixelIndexes[i] = this.sparseToPal[pixelIndexes[i]];
-		}
-		
-		return pixelIndexes;
+		return this.quant.reduce(img, retType, dithKern, dithSerp);
 	}
 	
 	/**
 	 * Returns a palette
 	 */
 	RgbQuantSMS.prototype.palette = function palette() {
-		if (!this.palRgb) {
-			var sparseRgb = this.quant.palette(true);
-			
-			var palRgb = [];
-			var sparseToPal = [];
-			for (var i = 0; i != sparseRgb.length; i++) {
-				var rgb = sparseRgb[i];
-				if (rgb) {
-					sparseToPal[i] = palRgb.length;
-					palRgb.push(rgb);
-				}
-			}
-			
-			this.palRgb = palRgb;
-			this.sparseToPal = sparseToPal;
-		}
-		return this.palRgb.slice();
+		return this.quant.palette(true);
 	}
 	
 	function doRgbPal(levels) {
