@@ -389,6 +389,7 @@ function process(srcs) {
 					var newTile = {
 						number: newTileNum,
 						popularity: 0,
+						entropy: 0,
 						flipX: group[0].flipX,
 						flipY: group[0].flipY,
 						pixels: []
@@ -399,25 +400,30 @@ function process(srcs) {
 						triplets.push([0, 0, 0]);
 					}
 					
+					var totalWeight = 0;
+					
 					group.forEach(function(tile){
 						indexMap[tile.number] = newTileNum;
 						newTile.popularity += tile.popularity;
+						
+						var weight = tile.popularity;
+						totalWeight += weight;
 						
 						var offs = 0;
 						for (var tY = 0; tY != 8; tY++) {
 							for (var tX = 0; tX != 8; tX++) {
 								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
 								var total = triplets[offs++];
-								total[0] += rgb[0] * tile.popularity;
-								total[1] += rgb[1] * tile.popularity;
-								total[2] += rgb[2] * tile.popularity;
+								total[0] += rgb[0] * weight;
+								total[1] += rgb[1] * weight;
+								total[2] += rgb[2] * weight;
 							}
 						}						
 					});									
 
 					triplets.forEach(function(rgb){
 						for (var ch = 0; ch != 3; ch++) {
-							rgb[ch] /= newTile.popularity;
+							rgb[ch] /= totalWeight;
 						}
 					});
 					allTriplets = allTriplets.concat(triplets);
