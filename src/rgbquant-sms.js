@@ -28,9 +28,15 @@
 	
 	/**
 	 * Image quantizer
+	 * retType: 1 - Uint8Array (default), 2 - Indexed array, 8 - IndexedImage
 	 */
 	RgbQuantSMS.prototype.reduce = function(img, retType, dithKern, dithSerp) {
-		return this.quant.reduce(img, retType, dithKern, dithSerp);
+		var pixels = this.quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
+		if (retType == 8) {
+			var palRgb = this.palette();
+			return new IndexedImage(img.width, img.height, palRgb, pixels);
+		}
+		return pixels;
 	}
 	
 	/**

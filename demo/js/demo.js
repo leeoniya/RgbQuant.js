@@ -143,12 +143,10 @@ function process(srcs) {
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
-			var img8i;
+			var indexedImage;
 			ti.mark("reduce '" + id + "'", function() {
-				img8i = quant.reduce(img, 2);
+				indexedImage = quant.reduce(img, 8);
 			});
-			
-			var indexedImage = new RgbQuantSMS.IndexedImage(img.width, img.height, palRgb, img8i);
 			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
@@ -208,7 +206,7 @@ function process(srcs) {
 						for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
 							var tileLine = tile.pixels[pY];
 							for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
-								tileLine[pX] = img8i[lineOffs + pX];
+								tileLine[pX] = indexedImage.pixels[lineOffs + pX];
 							}
 							lineOffs += img.width;
 						}				
