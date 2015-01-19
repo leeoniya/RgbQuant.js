@@ -170,15 +170,6 @@ function process(srcs) {
 				rawTilBg = quant.normalizeTiles(rawTilBg);
 			});
 
-		
-			function tileKey(tile) {
-				return tile.pixels.map(function(line){ return line.join(',') }).join(';');
-			}
-
-			function boolXor(a, b) {
-				return !a != !b;
-			}
-
 			ti.mark("remove duplicate tiles", function() {
 				rawTilBg = quant.removeDuplicateTiles(rawTilBg);
 			});
@@ -197,93 +188,10 @@ function process(srcs) {
 			});
 			
 			ti.mark("similar tiles -> DOM", function() {
-				var indexMap = [];
-				var allTriplets = [];
-				var newTiles = similarTiles.map(function(group, newTileNum){ 
-					var newTile = {
-						number: newTileNum,
-						popularity: 0,
-						entropy: 0,
-						flipX: group[0].flipX,
-						flipY: group[0].flipY,
-						pixels: []
-					};
-
-					var triplets = [];
-					for (var i = 0; i != 8 * 8; i++) {
-						triplets.push([0, 0, 0]);
-					}
-					
-					var totalWeight = 0;
-					
-					group.forEach(function(tile){
-						indexMap[tile.number] = newTileNum;
-						newTile.popularity += tile.popularity;
-						
-						var weight = tile.popularity * (tile.entropy + 1);
-						totalWeight += weight;
-						
-						var offs = 0;
-						for (var tY = 0; tY != 8; tY++) {
-							for (var tX = 0; tX != 8; tX++) {
-								var rgb = rawTilBg.palette[tile.pixels[tY][tX]];
-								var total = triplets[offs++];
-								total[0] += rgb[0] * weight;
-								total[1] += rgb[1] * weight;
-								total[2] += rgb[2] * weight;
-							}
-						}						
-					});									
-
-					triplets.forEach(function(rgb){
-						for (var ch = 0; ch != 3; ch++) {
-							rgb[ch] /= totalWeight;
-						}
-					});
-					allTriplets = allTriplets.concat(triplets);
-										
-					return newTile;
-				});
-				
-				var img8 = new Uint8Array(allTriplets.length * 4);
-				var iOfs = 0;
-				for (var tOfs = 0; tOfs != allTriplets.length; tOfs++) {
-					var rgb = allTriplets[tOfs];
-					for (var i = 0; i != 3; i++) {
-						img8[iOfs++] = rgb[i];
-					}
-					img8[iOfs++] = 0xFF;
-				}
-				
-				var img8i = quant.reduce(img8, 2);
-				var iOfs = 0;
-				newTiles.forEach(function(newTile){
-					for (var tY = 0; tY != 8; tY++) {
-						var pixelLine = [];
-						for (var tX = 0; tX != 8; tX++) {
-							pixelLine.push(img8i[iOfs++]);
-						}
-						newTile.pixels.push(pixelLine);
-					}
-				});
-			
-				displayTileset($tsets, newTiles, rawTilBg.palette);
-				
-				rawTilBg.map = rawTilBg.map.map(function(line){
-					return line.map(function(cell){
-						var newTileNum = indexMap[cell.tileNum];
-						var origTile = rawTilBg.tiles[cell.tileNum];
-						var newTile = newTiles[newTileNum];
-						
-						return {
-							flipX: boolXor(cell.flipX, boolXor(origTile.flipX, newTile.flipX)),
-							flipY: boolXor(cell.flipY, boolXor(origTile.flipY, newTile.flipY)),
-							tileNum: newTileNum
-						}
-					});
-				});
-				rawTilBg.tiles = newTiles;
+				rawTilBg = quant.removeSimilarTiles(rawTilBg, similarTiles);
 			});
+
+			displayTileset($tsets, rawTilBg.tiles, rawTilBg.palette);
 			
 			ti.mark("raw map -> DOM", function() {
 				var image = new RgbQuantSMS.IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
