@@ -235,6 +235,48 @@
 			}, 0);
 		});
 	}
+
+	/**
+	 * Groups tiles by similarity. Returns an array of arrays of similar tiles.
+	 */
+	RgbQuantSMS.prototype.groupBySimilarity = function(tileMap) {
+		var data = tileMap.tiles.map(function(tile){
+			return {
+				tile: tile,
+				feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
+					return a.concat(tileMap.palette[colorIndex]);
+				}, [])
+			};
+		});
+		
+		var dataToClusterize = _.pluck(data, 'feature').map(function(featureVector){
+			var grays = [];
+			for (var i = 0; i != featureVector.length; i += 3) {
+				var r = featureVector[i];
+				var g = featureVector[i + 1];
+				var b = featureVector[i + 2];
+				var luma =  0.2126 * r + 0.7152 * g + 0.0722 * b;
+				grays.push(parseInt(luma));
+			}
+			
+			return featureVector.concat(grays);
+		});
+		
+		var clusters = clusterfck.kmeans(dataToClusterize, 256);
+		
+		function buildKey(featureVector) {
+			return featureVector.slice(0, 8 * 8 * 3).join(',');
+		}
+		
+		var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
+		var similarTiles = clusters.map(function(group){
+			return group.map(function(feature){
+				return index[buildKey(feature)].tile;
+			});
+		});
+		
+		return similarTiles;
+	}
 	
 	
 	//-------------------
