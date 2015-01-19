@@ -148,7 +148,7 @@ function process(srcs) {
 				img8i = quant.reduce(img, 2);
 			});
 			
-			var indexedImage = new IndexedImage(img.width, img.height, palRgb, img8i);
+			var indexedImage = new RgbQuantSMS.IndexedImage(img.width, img.height, palRgb, img8i);
 			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
@@ -472,7 +472,7 @@ function process(srcs) {
 			});
 			
 			ti.mark("raw map -> DOM", function() {
-				var image = new IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
+				var image = new RgbQuantSMS.IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
 				image.drawMap(rawTilBg);
 				
 				var	ican = drawPixels(image.toRgbBytes(), image.width);
@@ -486,60 +486,13 @@ function displayTileset($container, tiles, palette) {
 	$container.append($('<h5>').html(tiles.length + ' tiles'));
 
 	tiles.forEach(function(tile){
-		var image = new IndexedImage(8, 8, palette);
+		var image = new RgbQuantSMS.IndexedImage(8, 8, palette);
 		image.drawTile(tile, 0, 0, tile.flipX, tile.flipY);
 		var	ican = drawPixels(image.toRgbBytes(), image.width);
 		$container.append(ican);
 	});
 }
 
-function IndexedImage(width, height, palette, pixels) {
-	this.width = width;
-	this.height = height;
-	this.palette = palette;
-	this.pixels = new Uint8Array(pixels || width * height) 
-}
-
-IndexedImage.prototype.toRgbBytes = function() {
-	var img8 = new Uint8Array(this.pixels.length * 4);
-	
-	var len = this.pixels.length;
-	for (var i = 0, j = 0; i != len; i++, j += 4) {
-		var rgb = this.palette[this.pixels[i]];
-		img8[j] = rgb[0];
-		img8[j + 1] = rgb[1];
-		img8[j + 2] = rgb[2];
-		img8[j + 3] = 0xFF;
-	}
-	
-	return img8;
-}
-
-IndexedImage.prototype.drawTile = function(tile, x, y, flipX, flipY) {
-	var flipX = tile.flipX ? !flipX : flipX;
-	var flipY = tile.flipY ? !flipY : flipY;
-
-	var offs = y * this.width + x;	
-	
-	for (var tY = 0; tY != 8; tY++) {
-		var tileLine = tile.pixels[flipY ? 7 - tY : tY];
-		var yOffs = offs + tY * this.width
-		for (var tX = 0; tX != 8; tX++) {
-			this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
-		}
-	}
-}
-
-IndexedImage.prototype.drawMap = function(map) {
-	for (var mY = 0; mY != map.mapH; mY++) {
-		var mapLine = map.map[mY];
-		for (var mX = 0; mX != map.mapW; mX++) {
-			var mapCell = mapLine[mX];
-			var tile = map.tiles[mapCell.tileNum];
-			this.drawTile(tile, mX * 8, mY * 8, mapCell.flipX, mapCell.flipY);
-		}
-	}
-}
 
 $(document).on("click", "img.th", function() {
 	cfg_edited = false;
