@@ -41,6 +41,8 @@
 		this.dithKern = opts.dithKern || null;
 		// dither serpentine pattern
 		this.dithSerp = opts.dithSerp || false;
+		// minimum color difference (0-1) needed to dither
+		this.dithDelta = opts.dithDelta || 0;
 
 		// accumulated histogram
 		this.histogram = {};
@@ -52,8 +54,10 @@
 		this.i32idx = {};
 		// {i32:rgb}
 		this.i32rgb = {};
-
+		// max number of color-mappings to cache
 		this.cacheLimit = opts.cacheLimit || 2e5;
+		// allows pre-defined palettes to be re-indexed (enabling palette compacting and sorting)
+		this.reIndex = opts.reIndex || this.idxrgb.length == 0;
 
 		// if pre-defined palette, build lookups
 		if (this.idxrgb.length > 0) {
@@ -258,6 +262,13 @@
 					(g2  <<  8)	|	// green
 					 r2;
 
+				// dithering strength
+				if (this.dithDelta) {
+					var dist = colorDist([r1, g1, b1], [r2, g2, b2]);
+					if (dist < this.dithDelta)
+						continue;
+				}
+
 				// Component distance
 				var er = r1 - r2,
 					eg = g1 - g2,
@@ -334,7 +345,7 @@
 
 		this.reducePal(idxi32);
 
-		if (!noSort && !preDef)
+		if (!noSort && this.reIndex)
 			this.sortPal();
 
 		this.palLocked = true;
@@ -346,13 +357,36 @@
 	};
 
 	RgbQuant.prototype.prunePal = function prunePal(keep) {
+		var i32;
+
 		for (var j = 0; j < this.idxrgb.length; j++) {
 			if (!keep[j]) {
 				i32 = this.idxi32[j];
 				this.idxrgb[j] = null;
 				this.idxi32[j] = null;
-				this.i32idx[i32] = null;
+				delete this.i32idx[i32];
 			}
+		}
+
+		// compact
+		if (this.reIndex) {
+			var idxrgb = [],
+				idxi32 = [],
+				i32idx = {};
+
+			for (var j = 0, i = 0; j < this.idxrgb.length; j++) {
+				if (this.idxrgb[j]) {
+					i32 = this.idxi32[j];
+					idxrgb[i] = this.idxrgb[j];
+					i32idx[i32] = i;
+					idxi32[i] = i32;
+					i++;
+				}
+			}
+
+			this.idxrgb = idxrgb;
+			this.idxi32 = idxi32;
+			this.i32idx = i32idx;
 		}
 	};
 
@@ -361,7 +395,7 @@
 		// if pre-defined palette's length exceeds target
 		if (this.idxrgb.length > this.colors) {
 			// quantize histogram to existing palette
-			var len = idxi32.length, keep = {}, uniques = 0, idx, i32, pruned = false;
+			var len = idxi32.length, keep = {}, uniques = 0, idx, pruned = false;
 
 			for (var i = 0; i < len; i++) {
 				// palette length reached, unset all remaining colors (sparse palette)
