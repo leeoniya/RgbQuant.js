@@ -34,7 +34,7 @@ var opts = {
     dithDelta: 0,       // dithering threshhold (0-1) e.g: 0.05 will not dither colors with <= 5% difference
     dithSerp: false,    // enable serpentine pattern dithering
     palette: [],        // a predefined palette to start with in r,g,b tuple format: [[r,g,b],[r,g,b]...]
-    reIndex: false,     // affects predefined palettes only. if true, allows compacting of sparsed palette once target palette size if reached. also enables palette sorting.
+    reIndex: false,     // affects predefined palettes only. if true, allows compacting of sparsed palette once target palette size is reached. also enables palette sorting.
 };
 
 var q = new RgbQuant(opts);
