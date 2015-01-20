@@ -341,8 +341,6 @@
 		// int32-ify values
 		idxi32 = idxi32.map(function(v){return +v;});
 
-		var preDef = this.idxrgb.length > 0;
-
 		this.reducePal(idxi32);
 
 		if (!noSort && this.reIndex)
