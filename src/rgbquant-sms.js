@@ -16,6 +16,8 @@
 		opts.reIndex = true;
 		opts.dithDelta = 0.05;
 		
+		this.maxTiles = opts.maxTiles || 256;
+		
 		// When merging tiles, should they be weighed by popularity?
 		this.weighPopularity = opts.weighPopularity;
 		// When merging tiles, should they be weighed by entropy?
@@ -267,7 +269,7 @@
 			return featureVector.concat(grays);
 		});
 		
-		var clusters = clusterfck.kmeans(dataToClusterize, 256);
+		var clusters = clusterfck.kmeans(dataToClusterize, this.maxTiles);
 		
 		function buildKey(featureVector) {
 			return featureVector.slice(0, 8 * 8 * 3).join(',');

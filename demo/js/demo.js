@@ -3,6 +3,7 @@ var cfg_edited = false;
 
 var dflt_opts = {
 	colors: 16,
+	maxTiles: 256,
 	method: 2,
 	initColors: 4096,
 	minHueCols: 0,
