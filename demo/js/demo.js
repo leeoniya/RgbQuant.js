@@ -258,8 +258,26 @@ $(document).on("click", "img.th", function() {
 		reader.onload = function (e) {
 			var $newImg = $('<img>').addClass('th').attr('src', e.target.result);
 			$('#custom-images').append($newImg);
+			
+			localStorage['custom-image-' + new Date().getTime()] = e.target.result;
 		}
 		
 		reader.readAsDataURL(this.files[0]);
+	}
+}).on("click", "#clear-images", function(){
+	for (var key in localStorage) {
+		if (key.startsWith('custom-image-')) {
+			localStorage.removeItem(key);
+		}
+		$('#custom-images > img').remove();
+	}
+});
+
+$(function(){
+	for (var key in localStorage) {
+		if (key.startsWith('custom-image-')) {
+			var $newImg = $('<img>').addClass('th').attr('src', localStorage[key]);
+			$('#custom-images').append($newImg);
+		}
 	}
 });
