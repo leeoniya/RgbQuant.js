@@ -251,4 +251,15 @@ $(document).on("click", "img.th", function() {
 //	process(["img/grad_default.png"]);
 }).on("change", "input, textarea, select", function() {
 	cfg_edited = true;
+}).on("change", "#add-image", function() {
+	if (this.files && this.files[0]) {
+		var reader = new FileReader();
+		
+		reader.onload = function (e) {
+			var $newImg = $('<img>').addClass('th').attr('src', e.target.result);
+			$('#custom-images').append($newImg);
+		}
+		
+		reader.readAsDataURL(this.files[0]);
+	}
 });
