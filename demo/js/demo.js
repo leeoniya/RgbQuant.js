@@ -3,11 +3,14 @@ var cfg_edited = false;
 
 var dflt_opts = {
 	colors: 16,
+	maxTiles: 256,
 	method: 2,
 	initColors: 4096,
 	minHueCols: 0,
 	dithKern: null,
 	dithSerp: false,
+	weighPopularity: true,
+	weighEntropy: false,
 };
 
 var cfgs = {
