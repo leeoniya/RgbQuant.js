@@ -16,6 +16,11 @@
 		opts.reIndex = true;
 		opts.dithDelta = 0.05;
 		
+		// When merging tiles, should they be weighed by popularity?
+		this.weighPopularity = opts.weighPopularity;
+		// When merging tiles, should they be weighed by entropy?
+		this.weighEntropy = opts.weighEntropy;
+		
 		this.quant = new RgbQuant(opts);
 	}
 	
@@ -279,6 +284,7 @@
 	}
 
 	RgbQuantSMS.prototype.removeSimilarTiles = function(tileMap, similarTiles) {
+		var self = this;
 		var indexMap = [];
 		var allTriplets = [];
 		var newTiles = similarTiles.map(function(group, newTileNum){ 
@@ -302,7 +308,7 @@
 				indexMap[tile.number] = newTileNum;
 				newTile.popularity += tile.popularity;
 				
-				var weight = tile.popularity * (tile.entropy + 1);
+				var weight = (self.weighPopularity ? tile.popularity : 1) * (self.weighEntropy ? tile.entropy + 0.1 : 1);
 				totalWeight += weight;
 				
 				var offs = 0;

@@ -8,6 +8,8 @@ var dflt_opts = {
 	minHueCols: 0,
 	dithKern: null,
 	dithSerp: false,
+	weighPopularity: true,
+	weighEntropy: false,
 };
 
 var cfgs = {
