@@ -237,7 +237,7 @@
 			
 			tile.entropy = - tileHistogram.reduce(function(total, cnt){
 				var p = (cnt || 0) / (8 * 8);
-				var colorEntropy = p * Math.log2(p);
+				var colorEntropy = p * log2(p);
 				return total + colorEntropy;
 			}, 0);
 		});
@@ -480,6 +480,11 @@
 			}
 		}
 		return palette;
+	}
+	
+	var LOG2 = Math.log(2);
+	function log2(n) {
+		return Math.log(n) / LOG2;
 	}
 	
 	var PREDEFINED_PALETTES = {

@@ -248,7 +248,13 @@ $(document).on("click", "img.th", function() {
 	$note = $("#note"),
 	$opts = $("#opts");
 
-//	process(["img/grad_default.png"]);
+	// Loads variables from local storage.
+	for (var key in localStorage) {
+		if (key.startsWith('custom-image-')) {
+			var $newImg = $('<img>').addClass('th').attr('src', localStorage[key]);
+			$('#custom-images').append($newImg);
+		}
+	}
 }).on("change", "input, textarea, select", function() {
 	cfg_edited = true;
 }).on("change", "#add-image", function() {
@@ -270,14 +276,5 @@ $(document).on("click", "img.th", function() {
 			localStorage.removeItem(key);
 		}
 		$('#custom-images > img').remove();
-	}
-});
-
-$(function(){
-	for (var key in localStorage) {
-		if (key.startsWith('custom-image-')) {
-			var $newImg = $('<img>').addClass('th').attr('src', localStorage[key]);
-			$('#custom-images').append($newImg);
-		}
 	}
 });
