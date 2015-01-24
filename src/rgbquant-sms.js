@@ -345,7 +345,11 @@
 			img8[iOfs++] = 0xFF;
 		}
 		
-		var img8i = this.reduce(img8, 2);
+		// Don't re-dither if ordered dither was used.
+		var dithKern = this.quant.dithKern;
+		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : this.quant.dithKern; 
+		
+		var img8i = this.reduce(img8, 2, dithKern);
 		var iOfs = 0;
 		newTiles.forEach(function(newTile){
 			for (var tY = 0; tY != 8; tY++) {

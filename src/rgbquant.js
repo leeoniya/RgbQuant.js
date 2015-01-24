@@ -97,7 +97,7 @@
 		if (!this.palLocked)
 			this.buildPal();
 
-		dithKern = dithKern || this.dithKern;
+		dithKern = dithKern == 'None' ? '' : (dithKern || this.dithKern);
 		dithSerp = typeof dithSerp != "undefined" ? dithSerp : this.dithSerp;
 
 		retType = retType || 1;
