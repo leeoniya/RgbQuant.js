@@ -319,7 +319,8 @@
 			len = buf32.length;
 			
 		var mapW = map.length,
-			mapH = map[0].length;
+			mapH = map[0].length,
+			brightnessOffset = mapW * mapH / 3;
 			
 		var depth = this.palette(true)
 			// Transposes the array, so that [[r1,g1,b1],[r2,g2,b2]] becomes [[r1,r2],[g1,g2],[b1,b2]]
@@ -341,6 +342,10 @@
 			.map(function(distance){
 				return distance / (mapW * mapH);
 			});
+			
+		function boundColorValue(value) {
+			return Math.max(0, Math.min(255, Math.floor(value)));
+		}
 
 		for (var y = 0, mY = 0; y < height; y++) {
 			var lni = y * width;
@@ -362,15 +367,9 @@
 					b1 = (i32 & 0xff0000) >> 16;
 
 				// Reduced pixel
-				var r2 = Math.min(255, r1 + mapValue * depth[0]);
-					g2 = Math.min(255, g1 + mapValue * depth[1]);
-					b2 = Math.min(255, b1 + mapValue * depth[2]);
-				/*
-				var i32x = this.nearestColor(i32),
-					r2 = (i32x & 0xff),
-					g2 = (i32x & 0xff00) >> 8,
-					b2 = (i32x & 0xff0000) >> 16;
-				*/
+				var r2 = boundColorValue(r1 + (mapValue - brightnessOffset) * depth[0]);
+					g2 = boundColorValue(g1 + (mapValue - brightnessOffset) * depth[1]);
+					b2 = boundColorValue(b1 + (mapValue - brightnessOffset) * depth[2]);
 
 				buf32[idx] = this.nearestColor(
 					(255 << 24)	|	// alpha
