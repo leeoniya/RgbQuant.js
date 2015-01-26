@@ -1,0 +1,14 @@
+{
+  "name": "RgbQuant.js",
+  "description": "color quantization lib http://o-0.me/RgbQuant/",
+  "author": "https://github.com/leeoniya",
+  "version": "1.0.0",
+  "main": "src/rgbquant.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/forresto/RgbQuant.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/leeoniya/RgbQuant.js/issues"
+  }
+}

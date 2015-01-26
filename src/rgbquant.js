@@ -916,4 +916,9 @@
 	// expose
 	this.RgbQuant = RgbQuant;
 
+	// expose to commonJS
+	if (typeof module !== 'undefined' && module.exports) {
+		module.exports = RgbQuant;
+	}
+
 }).call(this);

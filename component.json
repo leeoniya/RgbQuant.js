@@ -1,0 +1,14 @@
+{
+  "name": "RgbQuant.js",
+  "repository": "forresto/RgbQuant.js",
+  "version": "1.0.0",
+  "dependencies": {
+  },
+  "main": "src/rgbquant.js",
+  "scripts": [
+    "src/rgbquant.js"
+  ],
+  "remotes": [
+    "https://raw.githubusercontent.com"
+  ]
+}
