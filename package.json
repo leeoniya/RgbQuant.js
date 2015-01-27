@@ -1,7 +1,8 @@
 {
   "name": "rgbquant",
-  "description": "color quantization lib http://o-0.me/RgbQuant/",
-  "author": "https://github.com/leeoniya",
+  "description": "color quantization lib",
+  "homepage": "http://o-0.me/RgbQuant/",
+  "author": "Leon Sorokin <leeoniya@gmail.com>",
   "version": "1.0.0",
   "main": "src/rgbquant.js",
   "repository": {
