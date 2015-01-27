@@ -832,6 +832,7 @@
 				can.height = img.naturalHeight;
 				ctx = can.getContext("2d");
 				ctx.drawImage(img,0,0);
+			case "Canvas":
 			case "HTMLCanvasElement":
 				can = can || img;
 				ctx = ctx || can.getContext("2d");
@@ -913,5 +914,10 @@
 
 	// expose
 	this.RgbQuant = RgbQuant;
+
+	// expose to commonJS
+	if (typeof module !== 'undefined' && module.exports) {
+		module.exports = RgbQuant;
+	}
 
 }).call(this);
