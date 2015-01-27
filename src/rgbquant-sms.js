@@ -24,17 +24,30 @@
 		// When merging tiles, should they be weighed by entropy?
 		this.weighEntropy = opts.weighEntropy;
 
-		this.quants = [];
-		for (var palNum = 0; palNum != this.paletteCount; palNum++) {
-			this.quants[palNum] = new RgbQuant(opts);
-		}
+		this.tempQuant = new RgbQuant(_.pick(opts, 'palette', 'colors', 'method', 'initColors', 'minHueCols'));
+		this.imagesToSample = [];
+		this.quants = null; // They will be initialized later
 	}
 	
 	/**
 	 * Gathers histogram info.
 	 */
 	RgbQuantSMS.prototype.sample = function sample(img, width) {
-		return this.quant.sample(img, width);
+		var rgbImg = this.tempQuant.toRgbImage(img, width);		
+		this.imagesToSample.push(rgbImg);
+		this.tempQuant.sample(rgbImg);
+	}
+	
+	/**
+	 * Builds the palette, in case it wasn't already
+	 */
+	RgbQuant.prototype.buildPal = function() {
+		if (this.quants) {
+			// Okay, already processed; nothing to do.
+			return;
+		}
+		
+		
 	}
 	
 	/**
@@ -42,23 +55,81 @@
 	 * retType: 1 - Uint8Array (default), 2 - Indexed array, 8 - IndexedImage
 	 */
 	RgbQuantSMS.prototype.reduce = function(img, retType, dithKern, dithSerp) {
+		this.buildPal();
+		
 		var pixels = this.quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
 		if (retType == 8) {
 			var palRgb = this.palette();
 			return new IndexedImage(img.width, img.height, palRgb, pixels);
 		}
 		return pixels;
-	}
+	}		
 	
 	/**
 	 * Returns a palette
 	 */
 	RgbQuantSMS.prototype.palette = function palette() {
-		return this.quant.palette(true);
+		this.buildPal();
+		return this.quants.map(function(quant){
+			return quant.palette(true);
+		});
 	}
 	
 	/**
-	 * Split an indexed image into a tileset+map (no optimization here)
+	 * Split an RGB image into a RGB tileset+map (no optimization here)
+	 */
+	RgbQuantSMS.prototype.toRgbTileMap = function(rgbImage) {
+		var tileMap = {
+			palette: null,
+			mapW: Math.ceil(rgbImage.width / 8.0),
+			mapH: Math.ceil(rgbImage.height / 8.0),
+			tiles: [],
+			map: []
+		};		
+
+		for (var mY = 0; mY != tileMap.mapH; mY++) {
+			var iY = mY * 8;
+			var maxY = Math.min(iY + 8, rgbImage.height);
+			var yOffs = iY * rgbImage.width;
+			
+			var mapLine = [];
+			tileMap.map[mY] = mapLine;
+			
+			for (var mX = 0; mX != tileMap.mapW; mX++) {
+				var tile = {
+					number: tileMap.tiles.length,
+					pixels: new Uint32Array(8 * 8)
+				};						
+				tileMap.tiles.push(tile);
+
+				// Copíes pixels from the image into the tile
+				var iX = mX * 8;
+				var maxX = Math.min(iX + 8, rgbImage.width);
+				var xyOffs = yOffs + iX;
+				
+				var lineOffs = xyOffs;	
+				var tileOffs = 0;
+				for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
+					for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
+						tile.pixels[tileOffs++] = rgbImage.pixels[lineOffs + pX];
+					}
+					lineOffs += rgbImage.width;
+				}				
+				
+				// Makes the current map slot point to the tile
+				mapLine[mX] = {
+					flipX: false,
+					flipY: false,
+					tileNum: tile.number
+				};
+			}
+		}
+		
+		return tileMap;
+	}
+	
+	/**
+	 * Split an indexed image into an indexed tileset+map (no optimization here)
 	 */
 	RgbQuantSMS.prototype.toTileMap = function(indexedImage) {
 		var tileMap = {

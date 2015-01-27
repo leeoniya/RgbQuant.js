@@ -782,10 +782,15 @@
 	};
 	
 	function RgbImage(data) {
-		this.buf8 = buf8;
-		this.buf32 = buf32;
-		this.width = width;
-		this.height = height;
+		this.buf8 = data.buf8;
+		this.buf32 = data.buf32;
+		this.width = data.width;
+		this.height = data.height;
+		
+		if (!(this.buf8 && this.buf32 && this.width && this.height)) {
+			console.warn("Fields given: ", this);
+			throw new Error("One or more of the image parameters has not been given.");
+		}
 	}
 
 	// Rec. 709 (sRGB) luma coef
@@ -937,7 +942,7 @@
 					buf8 = new Uint8Array(imgd.data);
 				else
 					buf8 = imgd.data;
-			case "RgbImage":
+			case "Object":
 				buf32 = buf32 || img.buf32;
 				buf8 = buf8 || img.buf8;
 				width = width || img.width;

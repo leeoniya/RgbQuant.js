@@ -99,8 +99,6 @@ function process(srcs) {
 		var opts = (srcs.length == 1) ? getOpts(baseName(srcs[0])[0]) : dflt_opts,
 			quant = new RgbQuantSMS(opts);
 
-		return; // Everything below this still hasn't been adapted to multi-palette
-
 		$.each(imgs, function() {
 			var img = this, id = baseName(img.src)[0];
 
@@ -108,6 +106,8 @@ function process(srcs) {
 				quant.sample(img);
 			});
 		});
+
+		return; // *** Everything below this still hasn't been adapted to multi-palette ***
 
 		var palRgb;
 		ti.mark("build RGB palette", function() {
