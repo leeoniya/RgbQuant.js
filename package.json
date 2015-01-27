@@ -6,7 +6,7 @@
   "main": "src/rgbquant.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/forresto/RgbQuant.js.git"
+    "url": "git://github.com/leeoniya/RgbQuant.js.git"
   },
   "bugs": {
     "url": "https://github.com/leeoniya/RgbQuant.js/issues"
