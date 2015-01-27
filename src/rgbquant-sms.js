@@ -16,14 +16,18 @@
 		opts.reIndex = true;
 		opts.dithDelta = 0.05;
 		
+		this.paletteCount = opts.paletteCount || 2;
 		this.maxTiles = opts.maxTiles || 256;
 		
 		// When merging tiles, should they be weighed by popularity?
 		this.weighPopularity = opts.weighPopularity;
 		// When merging tiles, should they be weighed by entropy?
 		this.weighEntropy = opts.weighEntropy;
-		
-		this.quant = new RgbQuant(opts);
+
+		this.quants = [];
+		for (var palNum = 0; palNum != this.paletteCount; palNum++) {
+			this.quants[palNum] = new RgbQuant(opts);
+		}
 	}
 	
 	/**
