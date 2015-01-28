@@ -77,23 +77,21 @@
 
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
 		this.quants = clusters.map(function(cluster){
-			var quant = new RgbQuant(self.quantizerOpts);
-			var pixels = new Uint32Array(cluster.length * 8 * 8);
+			var tiles = _.chain(cluster).map(function(histogram){
+				return index[buildKey(histogram)];
+			}).flatten().pluck('tile').value();
 			
-			var offs = 0;
-			cluster.forEach(function(histogram){
-				var tiles = index[buildKey(histogram)];
-				_.chain(tiles).pluck('tile').pluck('pixels').flatten().each(function(pixel){
-					var rgb = palette[pixel];
-					pixels[offs++] =
-						(255 << 24)	|		// alpha
+			var pixelIndexes = _.chain(tiles).pluck('pixels').flatten().value();
+			var pixelValues = pixelIndexes.map(function(pixel){
+				var rgb = palette[pixel];
+				return (255 << 24)	|		// alpha
 						(rgb[2]  << 16)	|	// blue
 						(rgb[1]  <<  8)	|	// green
 						 rgb[0];					
-				});
 			});
 			
-			quant.sample(pixels);			
+			var quant = new RgbQuant(self.quantizerOpts);
+			quant.sample(new Uint32Array(pixelValues), 8);
 			return quant;
 		});
 	}
