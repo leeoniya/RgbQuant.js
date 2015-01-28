@@ -24,9 +24,11 @@
 		// When merging tiles, should they be weighed by entropy?
 		this.weighEntropy = opts.weighEntropy;
 
-		this.tempQuant = new RgbQuant(_.pick(opts, 'palette', 'colors', 'method', 'initColors', 'minHueCols'));
+		this.tempQuant = new RgbQuant(_.pick(opts, 'palette', 'method', 'initColors', 'minHueCols'));
 		this.imagesToSample = [];
-		this.quants = null; // They will be initialized later
+		this.quants = null; // They will be initialized by buildPal()
+		
+		this.quantizerOpts = opts;
 	}
 	
 	/**
@@ -41,13 +43,59 @@
 	/**
 	 * Builds the palette, in case it wasn't already
 	 */
-	RgbQuant.prototype.buildPal = function() {
+	RgbQuantSMS.prototype.buildPal = function() {
 		if (this.quants) {
 			// Okay, already processed; nothing to do.
 			return;
 		}
+				
+		var self = this;
+		var palette = this.tempQuant.palette(true);
 		
+		var tilesToClusterize = _.flatten(this.imagesToSample.map(function(img){
+			var pixels = self.tempQuant.reduce(img, 2);			
+			var indexedImage = new IndexedImage(img.width, img.height, palette, pixels);
+			var tileMap = self.toTileMap(indexedImage);
+
+			return tileMap.tiles.map(function(tile){
+				var tileHistogram = new Uint8Array(tileMap.palette.length);
+				_.flatten(tile.pixels).forEach(function(pixel){
+					tileHistogram[pixel]++;
+				});				
+				return {
+					tile: tile,
+					histogram: tileHistogram
+				};
+			});
+		}));		
 		
+		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), 2);
+
+		function buildKey(histogram) {
+			return Array.prototype.slice.call(histogram).join(',');
+		}
+
+		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+		this.quants = clusters.map(function(cluster){
+			var quant = new RgbQuant(self.quantizerOpts);
+			var pixels = new Uint32Array(cluster.length * 8 * 8);
+			
+			var offs = 0;
+			cluster.forEach(function(histogram){
+				var tiles = index[buildKey(histogram)];
+				_.chain(tiles).pluck('tile').pluck('pixels').flatten().each(function(pixel){
+					var rgb = palette[pixel];
+					pixels[offs++] =
+						(255 << 24)	|		// alpha
+						(rgb[2]  << 16)	|	// blue
+						(rgb[1]  <<  8)	|	// green
+						 rgb[0];					
+				});
+			});
+			
+			quant.sample(pixels);			
+			return quant;
+		});
 	}
 	
 	/**
@@ -73,59 +121,6 @@
 		return this.quants.map(function(quant){
 			return quant.palette(true);
 		});
-	}
-	
-	/**
-	 * Split an RGB image into a RGB tileset+map (no optimization here)
-	 */
-	RgbQuantSMS.prototype.toRgbTileMap = function(rgbImage) {
-		var tileMap = {
-			palette: null,
-			mapW: Math.ceil(rgbImage.width / 8.0),
-			mapH: Math.ceil(rgbImage.height / 8.0),
-			tiles: [],
-			map: []
-		};		
-
-		for (var mY = 0; mY != tileMap.mapH; mY++) {
-			var iY = mY * 8;
-			var maxY = Math.min(iY + 8, rgbImage.height);
-			var yOffs = iY * rgbImage.width;
-			
-			var mapLine = [];
-			tileMap.map[mY] = mapLine;
-			
-			for (var mX = 0; mX != tileMap.mapW; mX++) {
-				var tile = {
-					number: tileMap.tiles.length,
-					pixels: new Uint32Array(8 * 8)
-				};						
-				tileMap.tiles.push(tile);
-
-				// Copíes pixels from the image into the tile
-				var iX = mX * 8;
-				var maxX = Math.min(iX + 8, rgbImage.width);
-				var xyOffs = yOffs + iX;
-				
-				var lineOffs = xyOffs;	
-				var tileOffs = 0;
-				for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
-					for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
-						tile.pixels[tileOffs++] = rgbImage.pixels[lineOffs + pX];
-					}
-					lineOffs += rgbImage.width;
-				}				
-				
-				// Makes the current map slot point to the tile
-				mapLine[mX] = {
-					flipX: false,
-					flipY: false,
-					tileNum: tile.number
-				};
-			}
-		}
-		
-		return tileMap;
 	}
 	
 	/**
