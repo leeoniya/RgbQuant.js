@@ -346,6 +346,10 @@
 		if (!noSort && this.reIndex)
 			this.sortPal();
 
+		// build cache of top histogram colors
+		for (var i = 0; i < idxi32.length; i++)
+			this.cacheColor(idxi32[i], this.nearestIndex(idxi32[i]));
+
 		this.palLocked = true;
 	};
 
@@ -605,7 +609,7 @@
 		if ((i32 & 0xff000000) >> 24 == 0)
 			return null;
 
-		if (this.i32idx[i32])
+		if (i32 in this.i32idx)
 			return this.i32idx[i32];
 
 		var min = 1000,
@@ -628,7 +632,7 @@
 			}
 		}
 
-		this.cacheColor(i32, idx);
+	//	this.cacheColor(i32, idx);
 
 		return idx;
 	};
