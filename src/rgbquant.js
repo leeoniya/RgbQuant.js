@@ -54,6 +54,8 @@
 		this.i32idx = {};
 		// {i32:rgb}
 		this.i32rgb = {};
+		// enable color caching (also incurs overhead of cache misses and cache building)
+		this.useCache = false;
 		// max number of color-mappings to cache
 		this.cacheFreq = opts.cacheFreq || 15;
 		// allows pre-defined palettes to be re-indexed (enabling palette compacting and sorting)
@@ -347,9 +349,8 @@
 			this.sortPal();
 
 		// build cache of top histogram colors
-		this.cacheHistogram(idxi32);
-
-//		console.log(this.i32idx);
+		if (this.useCache)
+			this.cacheHistogram(idxi32);
 
 		this.palLocked = true;
 	};
@@ -610,7 +611,7 @@
 		if ((i32 & 0xff000000) >> 24 == 0)
 			return null;
 
-		if (i32 in this.i32idx)
+		if (this.useCache && (""+i32) in this.i32idx)
 			return this.i32idx[i32];
 
 		var min = 1000,
@@ -633,19 +634,12 @@
 			}
 		}
 
-	//	this.cacheColor(i32, idx);
-
 		return idx;
 	};
 
 	RgbQuant.prototype.cacheHistogram = function cacheHistogram(idxi32) {
-		var x = 0;
-		for (var i = 0, i32 = idxi32[i]; i < idxi32.length && this.histogram[i32] >= this.cacheFreq; i32 = idxi32[i++]) {
+		for (var i = 0, i32 = idxi32[i]; i < idxi32.length && this.histogram[i32] >= this.cacheFreq; i32 = idxi32[i++])
 			this.i32idx[i32] = this.nearestIndex(i32);
-			x++;
-		}
-
-		console.log(x);
 	};
 
 	function HueStats(numGroups, minCols) {
