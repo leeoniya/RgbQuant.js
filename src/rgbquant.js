@@ -722,7 +722,7 @@
 	};
 	
 	RgbQuant.prototype.toRgbImage = function(img, width) {
-		return new RgbImage(getImageData(img, width));
+		return getImageData(img, width);
 	}
 
 	function HueStats(numGroups, minCols) {
@@ -781,18 +781,6 @@
 		}
 	};
 	
-	function RgbImage(data) {
-		this.buf8 = data.buf8;
-		this.buf32 = data.buf32;
-		this.width = data.width;
-		this.height = data.height;
-		
-		if (!(this.buf8 && this.buf32 && this.width && this.height)) {
-			console.warn("Fields given: ", this);
-			throw new Error("One or more of the image parameters has not been given.");
-		}
-	}
-
 	// Rec. 709 (sRGB) luma coef
 	var Pr = .2126,
 		Pg = .7152,

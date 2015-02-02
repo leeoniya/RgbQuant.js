@@ -55,7 +55,7 @@
 		var tilesToClusterize = _.flatten(this.imagesToSample.map(function(img){
 			var pixels = self.tempQuant.reduce(img, 2);			
 			var indexedImage = new IndexedImage(img.width, img.height, palette, pixels);
-			var tileMap = self.toTileMap(indexedImage);
+			var tileMap = self.toSimpleTileMap(indexedImage);
 
 			return tileMap.tiles.map(function(tile){
 				var tileHistogram = new Uint8Array(tileMap.palette.length);
@@ -100,21 +100,43 @@
 	 * Image quantizer
 	 * retType: 1 - Uint8Array (default), 2 - Indexed array, 8 - IndexedImage
 	 */
-	RgbQuantSMS.prototype.reduce = function(img, retType, dithKern, dithSerp) {
+	RgbQuantSMS.prototype.reduce = function(quant, img, retType, dithKern, dithSerp) {
 		this.buildPal();
-		
-		var pixels = this.quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
+				
+		var pixels = quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
 		if (retType == 8) {
-			var palRgb = this.palette();
+			var palRgb = quant.palette(true);
 			return new IndexedImage(img.width, img.height, palRgb, pixels);
 		}
 		return pixels;
 	}		
 	
+	RgbQuantSMS.prototype.reduceToTileMap = function(img, dithKern, dithSerp) {
+		var rgbImage = this.quants[0].toRgbImage(img),
+			rgbTileset = this.toRgbTileset(rgbImage),
+			self = this;
+		
+		var tileMaps = this.quants.map(function(quant){
+			var indexedImage = self.reduce(quant, rgbImage, 8);
+			var tileMap = self.toSimpleTileMap(indexedImage);
+			return tileMap;
+		});		
+		
+		var fullTileMap = {
+			palettes: _.pluck(tileMaps, 'palette'),
+			mapW: tileMaps[0].mapW,
+			mapH: tileMaps[0].mapH,
+			tiles: tileMaps[0].tiles,
+			map: tileMaps[0].map
+		};
+		
+		return fullTileMap;
+	}
+	
 	/**
 	 * Returns a palette
 	 */
-	RgbQuantSMS.prototype.palette = function palette() {
+	RgbQuantSMS.prototype.palettes = function palette() {
 		this.buildPal();
 		return this.quants.map(function(quant){
 			return quant.palette(true);
@@ -122,9 +144,59 @@
 	}
 	
 	/**
+	 * Split an RGB image into an RGB tileset
+	 */
+	RgbQuantSMS.prototype.toRgbTileset = function(rgbImage) {
+		var mapW = Math.ceil(rgbImage.width / 8.0),
+			mapH = Math.ceil(rgbImage.height / 8.0),
+			tileset = [];
+	
+		for (var mY = 0; mY < mapH; mY++) {
+			var iY = mY * 8;
+			var maxY = Math.min(iY + 8, rgbImage.height);
+			var yOffs = iY * rgbImage.width;
+			
+			for (var mX = 0; mX < mapW; mX++) {
+				var tile = [
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+				]		
+				tileset.push(tile);
+
+				// Copíes pixels from the image into the tile
+				var iX = mX * 8;
+				var maxX = Math.min(iX + 8, rgbImage.width);
+				var xyOffs = yOffs + iX;
+				
+				var lineOffs = xyOffs;						
+				for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
+					var tileLine = tile[pY];
+					for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
+						var i32 = rgbImage.buf32[lineOffs + pX],
+							r = (i32 & 0xff),
+							g = (i32 & 0xff00) >> 8,
+							b = (i32 & 0xff0000) >> 16;
+							
+						tileLine[pX] = [r, g, b];
+					}
+					lineOffs += rgbImage.width;
+				}				
+			}
+		}
+		
+		return tileset;
+	}
+	
+	/**
 	 * Split an indexed image into an indexed tileset+map (no optimization here)
 	 */
-	RgbQuantSMS.prototype.toTileMap = function(indexedImage) {
+	RgbQuantSMS.prototype.toSimpleTileMap = function(indexedImage) {
 		var tileMap = {
 			palette: indexedImage.palette,
 			mapW: Math.ceil(indexedImage.width / 8.0),
@@ -144,6 +216,7 @@
 			for (var mX = 0; mX != tileMap.mapW; mX++) {
 				var tile = {
 					number: tileMap.tiles.length,
+					palNum: 0,
 					popularity: 1,
 					entropy: 0,
 					flipX: false,
@@ -192,6 +265,7 @@
 		function copyTileFlipX(orig) {
 			return {
 				number: orig.number,
+				palNum: orig.palNum,
 				popularity: orig.popularity,
 				entropy: 0,
 				flipX: !orig.flipX,
@@ -205,6 +279,7 @@
 		function copyTileFlipY(orig) {
 			return {
 				number: orig.number,
+				palNum: orig.palNum,
 				popularity: orig.popularity,
 				entropy: 0,
 				flipX: orig.flipX,

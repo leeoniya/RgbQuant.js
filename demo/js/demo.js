@@ -109,7 +109,7 @@ function process(srcs) {
 
 		var palettes;
 		ti.mark("build RGB palette", function() {
-			palettes = quant.palette();
+			palettes = quant.palettes();
 		});
 		
 		console.warn(palettes);
@@ -144,8 +144,6 @@ function process(srcs) {
 			});			
 		});
 
-		return; // *** Everything below this still hasn't been adapted to multi-palette ***
-
 		$redu.empty();
 		$tsetd.empty();
 		$tsets.empty();
@@ -153,10 +151,16 @@ function process(srcs) {
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
-			var indexedImage;
-			ti.mark("reduce '" + id + "'", function() {
-				indexedImage = quant.reduce(img, 8);
+			var unoptimizedTileMap;
+			ti.mark("tileset + map '" + id + "'", function() {
+				unoptimizedTileMap = quant.reduceToTileMap(img);
 			});
+
+			ti.mark("display unoptimized map '" + id + "'", function() {
+				displayTilemap($redu, unoptimizedTileMap);
+			});
+
+			return; // *** Everything below this still hasn't been adapted to multi-palette ***
 			
 			var img8;
 			ti.mark("build img8 '" + id + "'", function() {
@@ -223,6 +227,14 @@ function displayTileset($container, tiles, palette) {
 		var	ican = drawPixels(image.toRgbBytes(), image.width);
 		$container.append(ican);
 	});
+}
+
+function displayTilemap($container, tileMap) {
+	var palette = Array.concat.apply([], tileMap.palettes);
+	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, palette);
+	image.drawMap(tileMap);
+	var	ican = drawPixels(image.toRgbBytes(), image.width);
+	$container.append(ican);
 }
 
 
