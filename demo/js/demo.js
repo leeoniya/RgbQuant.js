@@ -230,8 +230,7 @@ function displayTileset($container, tiles, palette) {
 }
 
 function displayTilemap($container, tileMap) {
-	var palette = Array.concat.apply([], tileMap.palettes);
-	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, palette);
+	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, tileMap.palettes);
 	image.drawMap(tileMap);
 	var	ican = drawPixels(image.toRgbBytes(), image.width);
 	$container.append(ican);

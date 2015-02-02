@@ -126,9 +126,31 @@
 			palettes: _.pluck(tileMaps, 'palette'),
 			mapW: tileMaps[0].mapW,
 			mapH: tileMaps[0].mapH,
-			tiles: tileMaps[0].tiles,
+			tiles: [],
 			map: tileMaps[0].map
 		};
+		
+		// For each tile, chooses the palette that causes the least amount of error.
+		fullTileMap.tiles = rgbTileset.map(function(rgbTile, tileIndex){
+			var originalColors = _.flatten(rgbTile);
+			var candidates = tileMaps.map(function(tileMap, palNum){
+				var tile = tileMap.tiles[tileIndex];
+				tile.palNum = palNum;
+				
+				var tileColors = _.chain(tile.pixels).flatten().map(function(colorIndex){
+					return tileMap.palette[colorIndex];
+				}).flatten().value();
+				var difference = _.zip(originalColors, tileColors).reduce(function(total, pair){
+					var dif = pair[0] - pair[1];
+					return total + dif * dif
+				}, 0);
+				return {
+					tile: tile,
+					difference: difference
+				}
+			});
+			return _.min(candidates, function(tile){ return tile.difference }).tile;
+		});
 		
 		return fullTileMap;
 	}
@@ -534,11 +556,27 @@
 	/**
 	 * Represents an indexed image
 	 */
-	function IndexedImage(width, height, palette, pixels) {
+	function IndexedImage(width, height, palette, pixels) {	
 		this.width = width;
 		this.height = height;
-		this.palette = palette;
-		this.pixels = new Uint8Array(pixels || width * height) 
+		this.pixels = new Uint8Array(pixels || width * height);		
+		
+		if (palette[0][0].length) {
+			// Is it a multi-palette?
+			var self = this,
+				offs = 0;
+			this.palette = [];
+			this.colorOffsets = [];
+			palette.forEach(function(subPalette){
+				self.palette = self.palette.concat(subPalette);
+				self.colorOffsets.push(offs);
+				offs += subPalette.length;
+			});
+		} else {
+			// No, just a single palette.
+			this.palette = palette;
+			this.colorOffsets = [0];
+		}
 	}
 	
 	IndexedImage.prototype.toRgbBytes = function() {
@@ -566,7 +604,7 @@
 			var tileLine = tile.pixels[flipY ? 7 - tY : tY];
 			var yOffs = offs + tY * this.width
 			for (var tX = 0; tX != 8; tX++) {
-				this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
+				this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX] + this.colorOffsets[tile.palNum];
 			}
 		}
 	}
