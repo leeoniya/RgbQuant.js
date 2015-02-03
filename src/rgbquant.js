@@ -55,7 +55,7 @@
 		// {i32:rgb}
 		this.i32rgb = {};
 		// enable color caching (also incurs overhead of cache misses and cache building)
-		this.useCache = true;
+		this.useCache = opts.useCache !== false;
 		// max number of color-mappings to cache
 		this.cacheFreq = opts.cacheFreq || 10;
 		// allows pre-defined palettes to be re-indexed (enabling palette compacting and sorting)
