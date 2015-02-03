@@ -3,6 +3,7 @@ var cfg_edited = false;
 
 var dflt_opts = {
 	colors: 16,
+	paletteCount: 1,
 	maxTiles: 256,
 	method: 2,
 	initColors: 4096,
@@ -107,36 +108,41 @@ function process(srcs) {
 			});
 		});
 
-		var palRgb;
+		var palettes;
 		ti.mark("build RGB palette", function() {
-			palRgb = quant.palette();
+			palettes = quant.palettes();
 		});
 		
+		console.warn(palettes);
+		
 		ti.mark("Display palette", function() {
-			var pal8 = new Uint8Array(palRgb.length * 4);			
-			var offs = 0;
-			palRgb.forEach(function(entry){
-				entry = entry || [0, 0, 0];
-				// R, G, B
-				pal8[offs++] = entry[0];
-				pal8[offs++] = entry[1];
-				pal8[offs++] = entry[2];
-				// Alpha
-				pal8[offs++] = 0xFF;
-			});
+			$palt.empty();
+			palettes.forEach(function(palRgb){
+				var pal8 = new Uint8Array(palRgb.length * 4);			
+				var offs = 0;
+				palRgb.forEach(function(entry){
+					entry = entry || [0, 0, 0];
+					// R, G, B
+					pal8[offs++] = entry[0];
+					pal8[offs++] = entry[1];
+					pal8[offs++] = entry[2];
+					// Alpha
+					pal8[offs++] = 0xFF;
+				});
 
-			var pcan = drawPixels(pal8, 16, 128);
+				var pcan = drawPixels(pal8, 16, 128);
 
-			var plabel = $('<div>').addClass('pal-numbers').html(palRgb.map(function(color){
-				if (!color) {
-					return '*';
-				}
-			
-				var n = (color[0] & 0xC0) >> 6 | (color[1] & 0xC0) >> 4 | (color[2] & 0xC0) >> 2;
-				return ('00' + n.toString(16)).substr(-2);
-			}).join(' '));
-			
-			$palt.empty().append(pcan).append(plabel);
+				var plabel = $('<div>').addClass('pal-numbers').html(palRgb.map(function(color){
+					if (!color) {
+						return '*';
+					}
+				
+					var n = (color[0] & 0xC0) >> 6 | (color[1] & 0xC0) >> 4 | (color[2] & 0xC0) >> 2;
+					return ('00' + n.toString(16)).substr(-2);
+				}).join(' '));
+
+				$palt.append(pcan).append(plabel);
+			});			
 		});
 
 		$redu.empty();
@@ -146,62 +152,47 @@ function process(srcs) {
 		$(imgs).each(function() {
 			var img = this, id = baseName(img.src)[0];
 
-			var indexedImage;
-			ti.mark("reduce '" + id + "'", function() {
-				indexedImage = quant.reduce(img, 8);
-			});
-			
-			var img8;
-			ti.mark("build img8 '" + id + "'", function() {
-				img8 = indexedImage.toRgbBytes();
+			var unoptimizedTileMap;
+			ti.mark("tileset + map '" + id + "'", function() {
+				unoptimizedTileMap = quant.reduceToTileMap(img);
 			});
 
-			ti.mark("reduced -> DOM", function() {
-				var	ican = drawPixels(img8, img.width);
-				$redu.append(ican);
+			ti.mark("display unoptimized map '" + id + "'", function() {
+				displayTilemap($redu, unoptimizedTileMap);
 			});
-			
-			// Generates the unoptimized tileset + map
-			var rawTilBg;
-			ti.mark("raw tiles and background", function() {
-				rawTilBg = quant.toTileMap(indexedImage);
-			});			
-			
-			console.log("Raw map", rawTilBg);
-			
+
+			var optimizedTileMap;
 			ti.mark("normalize tiles", function() {
-				rawTilBg = quant.normalizeTiles(rawTilBg);
+				optimizedTileMap = quant.normalizeTiles(unoptimizedTileMap);
 			});
 
 			ti.mark("remove duplicate tiles", function() {
-				rawTilBg = quant.removeDuplicateTiles(rawTilBg);
+				optimizedTileMap = quant.removeDuplicateTiles(optimizedTileMap);
+			});
+
+			ti.mark("tileset -> DOM", function() {
+				displayTileset($tsetd, optimizedTileMap.tiles, optimizedTileMap.palettes);
 			});
 
 			ti.mark("Calculate tile entropy", function() {
-				quant.updateTileEntropy(rawTilBg.tiles);
+				quant.updateTileEntropy(optimizedTileMap.tiles);
 			});
 			
-			ti.mark("tileset -> DOM", function() {
-				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
-			});
-
 			var similarTiles;
 			ti.mark("clusterize", function() {
-				similarTiles = quant.groupBySimilarity(rawTilBg);
-			});
-			
-			ti.mark("similar tiles -> DOM", function() {
-				rawTilBg = quant.removeSimilarTiles(rawTilBg, similarTiles);
+				similarTiles = quant.groupBySimilarity(optimizedTileMap);
 			});
 
-			displayTileset($tsets, rawTilBg.tiles, rawTilBg.palette);
+			ti.mark("Remove similar tiles", function() {
+				optimizedTileMap = quant.removeSimilarTiles(optimizedTileMap, similarTiles);
+			});
+
+			ti.mark("Display similar tiles", function() {
+				displayTileset($tsets, optimizedTileMap.tiles, optimizedTileMap.palettes);
+			});
 			
-			ti.mark("raw map -> DOM", function() {
-				var image = new RgbQuantSMS.IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
-				image.drawMap(rawTilBg);
-				
-				var	ican = drawPixels(image.toRgbBytes(), image.width);
-				$dupli.append(ican);
+			ti.mark("Display optimized image", function() {
+				displayTilemap($dupli, optimizedTileMap);
 			});
 		});
 	});
@@ -216,6 +207,13 @@ function displayTileset($container, tiles, palette) {
 		var	ican = drawPixels(image.toRgbBytes(), image.width);
 		$container.append(ican);
 	});
+}
+
+function displayTilemap($container, tileMap) {
+	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, tileMap.palettes);
+	image.drawMap(tileMap);
+	var	ican = drawPixels(image.toRgbBytes(), image.width);
+	$container.append(ican);
 }
 
 

@@ -16,47 +16,209 @@
 		opts.reIndex = true;
 		opts.dithDelta = 0.05;
 		
+		this.paletteCount = opts.paletteCount || 1;
 		this.maxTiles = opts.maxTiles || 256;
 		
 		// When merging tiles, should they be weighed by popularity?
 		this.weighPopularity = opts.weighPopularity;
 		// When merging tiles, should they be weighed by entropy?
 		this.weighEntropy = opts.weighEntropy;
+
+		this.tempQuant = new RgbQuant(_.pick(opts, 'palette', 'method', 'initColors', 'minHueCols'));
+		this.imagesToSample = [];
+		this.quants = null; // They will be initialized by buildPal()
 		
-		this.quant = new RgbQuant(opts);
+		this.quantizerOpts = opts;
 	}
 	
 	/**
 	 * Gathers histogram info.
 	 */
 	RgbQuantSMS.prototype.sample = function sample(img, width) {
-		return this.quant.sample(img, width);
+		var rgbImg = this.tempQuant.toRgbImage(img, width);		
+		this.imagesToSample.push(rgbImg);
+		this.tempQuant.sample(rgbImg);
+	}
+	
+	/**
+	 * Builds the palette, in case it wasn't already
+	 */
+	RgbQuantSMS.prototype.buildPal = function() {
+		if (this.quants) {
+			// Okay, already processed; nothing to do.
+			return;
+		}
+				
+		var self = this;
+		var palette = this.tempQuant.palette(true);
+		
+		var tilesToClusterize = _.flatten(this.imagesToSample.map(function(img){
+			var pixels = self.tempQuant.reduce(img, 2);			
+			var indexedImage = new IndexedImage(img.width, img.height, palette, pixels);
+			var tileMap = self.toSimpleTileMap(indexedImage);
+
+			return tileMap.tiles.map(function(tile){
+				var tileHistogram = new Uint8Array(tileMap.palette.length);
+				_.flatten(tile.pixels).forEach(function(pixel){
+					tileHistogram[pixel]++;
+				});				
+				return {
+					tile: tile,
+					histogram: tileHistogram
+				};
+			});
+		}));		
+		
+		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), this.paletteCount);
+
+		function buildKey(histogram) {
+			return Array.prototype.slice.call(histogram).join(',');
+		}
+
+		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+		this.quants = clusters.map(function(cluster){
+			var tiles = _.chain(cluster).map(function(histogram){
+				return index[buildKey(histogram)];
+			}).flatten().pluck('tile').value();
+			
+			var pixelIndexes = _.chain(tiles).pluck('pixels').flatten().value();
+			var pixelValues = pixelIndexes.map(function(pixel){
+				var rgb = palette[pixel];
+				return (255 << 24)	|		// alpha
+						(rgb[2]  << 16)	|	// blue
+						(rgb[1]  <<  8)	|	// green
+						 rgb[0];					
+			});
+			
+			var quant = new RgbQuant(self.quantizerOpts);
+			quant.sample(new Uint32Array(pixelValues), 8);
+			return quant;
+		});
 	}
 	
 	/**
 	 * Image quantizer
 	 * retType: 1 - Uint8Array (default), 2 - Indexed array, 8 - IndexedImage
 	 */
-	RgbQuantSMS.prototype.reduce = function(img, retType, dithKern, dithSerp) {
-		var pixels = this.quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
+	RgbQuantSMS.prototype.reduce = function(quant, img, retType, dithKern, dithSerp) {
+		this.buildPal();
+				
+		var pixels = quant.reduce(img, retType == 8 ? 2 : retType, dithKern, dithSerp);
 		if (retType == 8) {
-			var palRgb = this.palette();
+			var palRgb = quant.palette(true);
 			return new IndexedImage(img.width, img.height, palRgb, pixels);
 		}
 		return pixels;
+	}		
+	
+	RgbQuantSMS.prototype.reduceToTileMap = function(img, dithKern, dithSerp) {
+		var rgbImage = this.quants[0].toRgbImage(img),
+			rgbTileset = this.toRgbTileset(rgbImage),
+			self = this;
+		
+		var tileMaps = this.quants.map(function(quant){
+			var indexedImage = self.reduce(quant, rgbImage, 8);
+			var tileMap = self.toSimpleTileMap(indexedImage);
+			return tileMap;
+		});		
+		
+		var fullTileMap = {
+			palettes: _.pluck(tileMaps, 'palette'),
+			mapW: tileMaps[0].mapW,
+			mapH: tileMaps[0].mapH,
+			tiles: [],
+			map: tileMaps[0].map
+		};
+		
+		// For each tile, chooses the palette that causes the least amount of error.
+		fullTileMap.tiles = rgbTileset.map(function(rgbTile, tileIndex){
+			var originalColors = _.flatten(rgbTile);
+			var candidates = tileMaps.map(function(tileMap, palNum){
+				var tile = tileMap.tiles[tileIndex];
+				tile.palNum = palNum;
+				
+				var tileColors = _.chain(tile.pixels).flatten().map(function(colorIndex){
+					return tileMap.palette[colorIndex];
+				}).flatten().value();
+				var difference = _.zip(originalColors, tileColors).reduce(function(total, pair){
+					var dif = pair[0] - pair[1];
+					return total + dif * dif
+				}, 0);
+				return {
+					tile: tile,
+					difference: difference
+				}
+			});
+			return _.min(candidates, function(tile){ return tile.difference }).tile;
+		});
+		
+		return fullTileMap;
 	}
 	
 	/**
 	 * Returns a palette
 	 */
-	RgbQuantSMS.prototype.palette = function palette() {
-		return this.quant.palette(true);
+	RgbQuantSMS.prototype.palettes = function palette() {
+		this.buildPal();
+		return this.quants.map(function(quant){
+			return quant.palette(true);
+		});
 	}
 	
 	/**
-	 * Split an indexed image into a tileset+map (no optimization here)
+	 * Split an RGB image into an RGB tileset
 	 */
-	RgbQuantSMS.prototype.toTileMap = function(indexedImage) {
+	RgbQuantSMS.prototype.toRgbTileset = function(rgbImage) {
+		var mapW = Math.ceil(rgbImage.width / 8.0),
+			mapH = Math.ceil(rgbImage.height / 8.0),
+			tileset = [];
+	
+		for (var mY = 0; mY < mapH; mY++) {
+			var iY = mY * 8;
+			var maxY = Math.min(iY + 8, rgbImage.height);
+			var yOffs = iY * rgbImage.width;
+			
+			for (var mX = 0; mX < mapW; mX++) {
+				var tile = [
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]],
+					[[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0],[0,0,0]]
+				]		
+				tileset.push(tile);
+
+				// Copíes pixels from the image into the tile
+				var iX = mX * 8;
+				var maxX = Math.min(iX + 8, rgbImage.width);
+				var xyOffs = yOffs + iX;
+				
+				var lineOffs = xyOffs;						
+				for (var pY = 0, miY = iY; miY < maxY; pY++, miY++) {
+					var tileLine = tile[pY];
+					for (var pX = 0, miX = iX; miX < maxX; pX++, miX++) {
+						var i32 = rgbImage.buf32[lineOffs + pX],
+							r = (i32 & 0xff),
+							g = (i32 & 0xff00) >> 8,
+							b = (i32 & 0xff0000) >> 16;
+							
+						tileLine[pX] = [r, g, b];
+					}
+					lineOffs += rgbImage.width;
+				}				
+			}
+		}
+		
+		return tileset;
+	}
+	
+	/**
+	 * Split an indexed image into an indexed tileset+map (no optimization here)
+	 */
+	RgbQuantSMS.prototype.toSimpleTileMap = function(indexedImage) {
 		var tileMap = {
 			palette: indexedImage.palette,
 			mapW: Math.ceil(indexedImage.width / 8.0),
@@ -76,6 +238,7 @@
 			for (var mX = 0; mX != tileMap.mapW; mX++) {
 				var tile = {
 					number: tileMap.tiles.length,
+					palNum: 0,
 					popularity: 1,
 					entropy: 0,
 					flipX: false,
@@ -124,6 +287,7 @@
 		function copyTileFlipX(orig) {
 			return {
 				number: orig.number,
+				palNum: orig.palNum,
 				popularity: orig.popularity,
 				entropy: 0,
 				flipX: !orig.flipX,
@@ -137,6 +301,7 @@
 		function copyTileFlipY(orig) {
 			return {
 				number: orig.number,
+				palNum: orig.palNum,
 				popularity: orig.popularity,
 				entropy: 0,
 				flipX: orig.flipX,
@@ -173,7 +338,7 @@
 		});
 		
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,
@@ -220,7 +385,7 @@
 		});
 
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,
@@ -251,7 +416,7 @@
 			return {
 				tile: tile,
 				feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
-					return a.concat(tileMap.palette[colorIndex]);
+					return a.concat(tileMap.palettes[tile.palNum][colorIndex]);
 				}, [])
 			};
 		});
@@ -275,11 +440,11 @@
 			return featureVector.slice(0, 8 * 8 * 3).join(',');
 		}
 		
-		var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
+		var byKey = _.groupBy(data, function(d){ return buildKey(d.feature) });				
 		var similarTiles = clusters.map(function(group){
-			return group.map(function(feature){
-				return index[buildKey(feature)].tile;
-			});
+			return group.reduce(function(list, feature){
+				return list.concat(_.pluck(byKey[buildKey(feature)], 'tile'));
+			}, []);
 		});
 		
 		return similarTiles;
@@ -292,6 +457,7 @@
 		var newTiles = similarTiles.map(function(group, newTileNum){ 
 			var newTile = {
 				number: newTileNum,
+				palNum: 0,
 				popularity: 0,
 				entropy: 0,
 				flipX: group[0].flipX,
@@ -316,7 +482,7 @@
 				var offs = 0;
 				for (var tY = 0; tY != 8; tY++) {
 					for (var tX = 0; tX != 8; tX++) {
-						var rgb = tileMap.palette[tile.pixels[tY][tX]];
+						var rgb = tileMap.palettes[tile.palNum][tile.pixels[tY][tX]];
 						var total = triplets[offs++];
 						total[0] += rgb[0] * weight;
 						total[1] += rgb[1] * weight;
@@ -335,6 +501,7 @@
 			return newTile;
 		});
 		
+		// Converts the RGB triplets into the byte array format supported by RgbQuant
 		var img8 = new Uint8Array(allTriplets.length * 4);
 		var iOfs = 0;
 		for (var tOfs = 0; tOfs != allTriplets.length; tOfs++) {
@@ -346,19 +513,56 @@
 		}
 		
 		// Don't re-dither if ordered dither was used.
-		var dithKern = this.quant.dithKern;
-		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : this.quant.dithKern; 
+		var dithKern = this.quants[0].dithKern;
+		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : dithKern; 
 		
-		var img8i = this.reduce(img8, 2, dithKern);
-		var iOfs = 0;
+		// Creates one reduced image for each palette
+		var imgs8i = this.quants.map(function(quant){
+			return quant.reduce(img8, 2, dithKern);
+		}); 
+		
+		var tileOfs = 0;
+		var tripletOfs = 0;
 		newTiles.forEach(function(newTile){
-			for (var tY = 0; tY != 8; tY++) {
-				var pixelLine = [];
-				for (var tX = 0; tX != 8; tX++) {
-					pixelLine.push(img8i[iOfs++]);
+			var candidates = imgs8i.map(function(img8i, palNum){
+				var pixels = [];
+				var iOfs = tileOfs;
+				for (var tY = 0; tY != 8; tY++) {
+					var pixelLine = [];
+					for (var tX = 0; tX != 8; tX++) {
+						pixelLine.push(img8i[iOfs++]);
+					}
+					pixels.push(pixelLine);
 				}
-				newTile.pixels.push(pixelLine);
-			}
+			
+				return {
+					palNum: palNum,
+					pixels: pixels
+				};
+			});
+
+			var originalColors = _.flatten(allTriplets.slice(tileOfs, tileOfs + 8 * 8));
+			var winner = _.chain(candidates).map(function(candidate){
+				var palette = tileMap.palettes[candidate.palNum];
+				var reducedColors = _.chain(candidate.pixels).flatten().map(function(colorIndex){
+					return palette[colorIndex];
+				}).flatten().value();
+				var difference = _.zip(originalColors, reducedColors).reduce(function(total, pair){
+					var difference = pair[0] - pair[1];
+					return total + difference * difference;
+				}, 0);
+			
+				return {
+					palNum: candidate.palNum,
+					pixels: candidate.pixels,
+					difference: difference
+				};
+			}).min(function(o){ return o.difference }).value();
+			
+			newTile.palNum = winner.palNum;
+			newTile.pixels = winner.pixels;
+			
+			tileOfs += 8 * 8;
 		});
 		
 		newMap = tileMap.map.map(function(line){
@@ -376,7 +580,7 @@
 		});
 
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,
@@ -391,11 +595,27 @@
 	/**
 	 * Represents an indexed image
 	 */
-	function IndexedImage(width, height, palette, pixels) {
+	function IndexedImage(width, height, palette, pixels) {	
 		this.width = width;
 		this.height = height;
-		this.palette = palette;
-		this.pixels = new Uint8Array(pixels || width * height) 
+		this.pixels = new Uint8Array(pixels || width * height);		
+		
+		if (palette[0][0].length) {
+			// Is it a multi-palette?
+			var self = this,
+				offs = 0;
+			this.palette = [];
+			this.colorOffsets = [];
+			palette.forEach(function(subPalette){
+				self.palette = self.palette.concat(subPalette);
+				self.colorOffsets.push(offs);
+				offs += subPalette.length;
+			});
+		} else {
+			// No, just a single palette.
+			this.palette = palette;
+			this.colorOffsets = [0];
+		}
 	}
 	
 	IndexedImage.prototype.toRgbBytes = function() {
@@ -423,7 +643,7 @@
 			var tileLine = tile.pixels[flipY ? 7 - tY : tY];
 			var yOffs = offs + tY * this.width
 			for (var tX = 0; tX != 8; tX++) {
-				this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX];
+				this.pixels[yOffs + tX] = tileLine[flipX ? 7 - tX : tX] + this.colorOffsets[tile.palNum];
 			}
 		}
 	}
@@ -446,6 +666,7 @@
 	function copyTile(orig) {
 		return {
 			number: orig.number,
+			palNum: orig.palNum,
 			popularity: orig.popularity,
 			entropy: orig.entropy,
 			flipX: orig.flipX,
@@ -457,7 +678,7 @@
 	}
 	
 	function tileKey(tile) {
-		return tile.pixels.map(function(line){ return line.join(',') }).join(';');
+		return tile.pixels.map(function(line){ return line.join(',') }).join(';') + '|' + tile.palNum;
 	}
 
 	function boolXor(a, b) {

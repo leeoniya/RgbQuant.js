@@ -720,6 +720,10 @@
 		this.i32idx[i32] = idx;
 		numCached++;
 	};
+	
+	RgbQuant.prototype.toRgbImage = function(img, width) {
+		return getImageData(img, width);
+	}
 
 	function HueStats(numGroups, minCols) {
 		this.numGroups = numGroups;
@@ -776,7 +780,7 @@
 			}
 		}
 	};
-
+	
 	// Rec. 709 (sRGB) luma coef
 	var Pr = .2126,
 		Pg = .7152,
@@ -926,6 +930,11 @@
 					buf8 = new Uint8Array(imgd.data);
 				else
 					buf8 = imgd.data;
+			case "Object":
+				buf32 = buf32 || img.buf32;
+				buf8 = buf8 || img.buf8;
+				width = width || img.width;
+				height = height || img.height;
 			case "Array":
 			case "CanvasPixelArray":
 				buf8 = buf8 || new Uint8Array(img);
