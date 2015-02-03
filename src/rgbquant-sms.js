@@ -457,6 +457,7 @@
 		var newTiles = similarTiles.map(function(group, newTileNum){ 
 			var newTile = {
 				number: newTileNum,
+				palNum: 0,
 				popularity: 0,
 				entropy: 0,
 				flipX: group[0].flipX,
@@ -481,7 +482,7 @@
 				var offs = 0;
 				for (var tY = 0; tY != 8; tY++) {
 					for (var tX = 0; tX != 8; tX++) {
-						var rgb = tileMap.palette[tile.pixels[tY][tX]];
+						var rgb = tileMap.palettes[tile.palNum][tile.pixels[tY][tX]];
 						var total = triplets[offs++];
 						total[0] += rgb[0] * weight;
 						total[1] += rgb[1] * weight;
@@ -500,6 +501,7 @@
 			return newTile;
 		});
 		
+		// Converts the RGB triplets into the byte array format supported by RgbQuant
 		var img8 = new Uint8Array(allTriplets.length * 4);
 		var iOfs = 0;
 		for (var tOfs = 0; tOfs != allTriplets.length; tOfs++) {
@@ -511,19 +513,56 @@
 		}
 		
 		// Don't re-dither if ordered dither was used.
-		var dithKern = this.quant.dithKern;
-		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : this.quant.dithKern; 
+		var dithKern = this.quants[0].dithKern;
+		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : dithKern; 
 		
-		var img8i = this.reduce(img8, 2, dithKern);
-		var iOfs = 0;
+		// Creates one reduced image for each palette
+		var imgs8i = this.quants.map(function(quant){
+			return quant.reduce(img8, 2, dithKern);
+		}); 
+		
+		var tileOfs = 0;
+		var tripletOfs = 0;
 		newTiles.forEach(function(newTile){
-			for (var tY = 0; tY != 8; tY++) {
-				var pixelLine = [];
-				for (var tX = 0; tX != 8; tX++) {
-					pixelLine.push(img8i[iOfs++]);
+			var candidates = imgs8i.map(function(img8i, palNum){
+				var pixels = [];
+				var iOfs = tileOfs;
+				for (var tY = 0; tY != 8; tY++) {
+					var pixelLine = [];
+					for (var tX = 0; tX != 8; tX++) {
+						pixelLine.push(img8i[iOfs++]);
+					}
+					pixels.push(pixelLine);
 				}
-				newTile.pixels.push(pixelLine);
-			}
+			
+				return {
+					palNum: palNum,
+					pixels: pixels
+				};
+			});
+
+			var originalColors = _.flatten(allTriplets.slice(tileOfs, tileOfs + 8 * 8));
+			var winner = _.chain(candidates).map(function(candidate){
+				var palette = tileMap.palettes[candidate.palNum];
+				var reducedColors = _.chain(candidate.pixels).flatten().map(function(colorIndex){
+					return palette[colorIndex];
+				}).flatten().value();
+				var difference = _.zip(originalColors, reducedColors).reduce(function(total, pair){
+					var difference = pair[0] - pair[1];
+					return total + difference * difference;
+				}, 0);
+			
+				return {
+					palNum: candidate.palNum,
+					pixels: candidate.pixels,
+					difference: difference
+				};
+			}).min(function(o){ return o.difference }).value();
+			
+			newTile.palNum = winner.palNum;
+			newTile.pixels = winner.pixels;
+			
+			tileOfs += 8 * 8;
 		});
 		
 		newMap = tileMap.map.map(function(line){
@@ -541,7 +580,7 @@
 		});
 
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,

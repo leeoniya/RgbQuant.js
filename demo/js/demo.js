@@ -181,21 +181,17 @@ function process(srcs) {
 			ti.mark("clusterize", function() {
 				similarTiles = quant.groupBySimilarity(optimizedTileMap);
 			});
-			
-			return; // *** Everything below this still hasn't been adapted to multi-palette ***
 
 			ti.mark("Remove similar tiles", function() {
 				optimizedTileMap = quant.removeSimilarTiles(optimizedTileMap, similarTiles);
 			});
 
-			displayTileset($tsets, rawTilBg.tiles, rawTilBg.palette);
+			ti.mark("Display similar tiles", function() {
+				displayTileset($tsets, optimizedTileMap.tiles, optimizedTileMap.palettes);
+			});
 			
-			ti.mark("raw map -> DOM", function() {
-				var image = new RgbQuantSMS.IndexedImage(rawTilBg.mapW * 8, rawTilBg.mapH * 8, indexedImage.palette);
-				image.drawMap(rawTilBg);
-				
-				var	ican = drawPixels(image.toRgbBytes(), image.width);
-				$dupli.append(ican);
+			ti.mark("Display optimized image", function() {
+				displayTilemap($dupli, optimizedTileMap);
 			});
 		});
 	});
