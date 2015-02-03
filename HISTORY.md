@@ -5,8 +5,9 @@ History
 - Transparency quant support (like pornel/pngquant, png8)
 
 #### 1.2.0 _(2015-??-??)_
-- Ordered dithering (#10) kernels:, wiki:
-- Half-toning?
+- Ordered dithering & half-toning (#10)
+  - wiki: http://en.wikipedia.org/wiki/Ordered_dithering
+  - kernels: https://github.com/eurica/makeplayingcards/blob/master/partial_imagemagick/thresholds.xml
 - ~~CIEDE2000 color-diff option~~ _sooooo sloooow_ (see ciede2000 branch)
 
 #### 1.1.1 _(2015-??-??)_
