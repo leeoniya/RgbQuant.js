@@ -16,7 +16,7 @@
 		opts.reIndex = true;
 		opts.dithDelta = 0.05;
 		
-		this.paletteCount = opts.paletteCount || 2;
+		this.paletteCount = opts.paletteCount || 1;
 		this.maxTiles = opts.maxTiles || 256;
 		
 		// When merging tiles, should they be weighed by popularity?
@@ -69,7 +69,7 @@
 			});
 		}));		
 		
-		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), 2);
+		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), this.paletteCount);
 
 		function buildKey(histogram) {
 			return Array.prototype.slice.call(histogram).join(',');
