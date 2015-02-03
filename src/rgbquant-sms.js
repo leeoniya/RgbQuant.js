@@ -338,7 +338,7 @@
 		});
 		
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,
@@ -385,7 +385,7 @@
 		});
 
 		return {
-			palette: tileMap.palette,
+			palettes: tileMap.palettes,
 			mapW: tileMap.mapW,
 			mapH: tileMap.mapH,
 			tiles: newTiles,
@@ -627,6 +627,7 @@
 	function copyTile(orig) {
 		return {
 			number: orig.number,
+			palNum: orig.palNum,
 			popularity: orig.popularity,
 			entropy: orig.entropy,
 			flipX: orig.flipX,
@@ -638,7 +639,7 @@
 	}
 	
 	function tileKey(tile) {
-		return tile.pixels.map(function(line){ return line.join(',') }).join(';');
+		return tile.pixels.map(function(line){ return line.join(',') }).join(';') + '|' + tile.palNum;
 	}
 
 	function boolXor(a, b) {

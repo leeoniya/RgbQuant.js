@@ -160,42 +160,25 @@ function process(srcs) {
 				displayTilemap($redu, unoptimizedTileMap);
 			});
 
-			return; // *** Everything below this still hasn't been adapted to multi-palette ***
-			
-			var img8;
-			ti.mark("build img8 '" + id + "'", function() {
-				img8 = indexedImage.toRgbBytes();
-			});
-
-			ti.mark("reduced -> DOM", function() {
-				var	ican = drawPixels(img8, img.width);
-				$redu.append(ican);
-			});
-						
-			// Generates the unoptimized tileset + map
-			var rawTilBg;
-			ti.mark("raw tiles and background", function() {
-				rawTilBg = quant.toTileMap(indexedImage);
-			});			
-			
-			console.log("Raw map", rawTilBg);
-			
+			var optimizedTileMap;
 			ti.mark("normalize tiles", function() {
-				rawTilBg = quant.normalizeTiles(rawTilBg);
+				optimizedTileMap = quant.normalizeTiles(unoptimizedTileMap);
 			});
 
 			ti.mark("remove duplicate tiles", function() {
-				rawTilBg = quant.removeDuplicateTiles(rawTilBg);
+				optimizedTileMap = quant.removeDuplicateTiles(optimizedTileMap);
 			});
+
+			ti.mark("tileset -> DOM", function() {
+				displayTileset($tsetd, optimizedTileMap.tiles, optimizedTileMap.palettes);
+			});
+
+			return; // *** Everything below this still hasn't been adapted to multi-palette ***
 
 			ti.mark("Calculate tile entropy", function() {
 				quant.updateTileEntropy(rawTilBg.tiles);
 			});
 			
-			ti.mark("tileset -> DOM", function() {
-				displayTileset($tsetd, rawTilBg.tiles, rawTilBg.palette);
-			});
-
 			var similarTiles;
 			ti.mark("clusterize", function() {
 				similarTiles = quant.groupBySimilarity(rawTilBg);
