@@ -173,19 +173,19 @@ function process(srcs) {
 				displayTileset($tsetd, optimizedTileMap.tiles, optimizedTileMap.palettes);
 			});
 
-			return; // *** Everything below this still hasn't been adapted to multi-palette ***
-
 			ti.mark("Calculate tile entropy", function() {
-				quant.updateTileEntropy(rawTilBg.tiles);
+				quant.updateTileEntropy(optimizedTileMap.tiles);
 			});
 			
 			var similarTiles;
 			ti.mark("clusterize", function() {
-				similarTiles = quant.groupBySimilarity(rawTilBg);
+				similarTiles = quant.groupBySimilarity(optimizedTileMap);
 			});
 			
-			ti.mark("similar tiles -> DOM", function() {
-				rawTilBg = quant.removeSimilarTiles(rawTilBg, similarTiles);
+			return; // *** Everything below this still hasn't been adapted to multi-palette ***
+
+			ti.mark("Remove similar tiles", function() {
+				optimizedTileMap = quant.removeSimilarTiles(optimizedTileMap, similarTiles);
 			});
 
 			displayTileset($tsets, rawTilBg.tiles, rawTilBg.palette);

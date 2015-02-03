@@ -416,7 +416,7 @@
 			return {
 				tile: tile,
 				feature: _.flatten(tile.pixels).reduce(function(a, colorIndex){
-					return a.concat(tileMap.palette[colorIndex]);
+					return a.concat(tileMap.palettes[tile.palNum][colorIndex]);
 				}, [])
 			};
 		});
@@ -440,11 +440,11 @@
 			return featureVector.slice(0, 8 * 8 * 3).join(',');
 		}
 		
-		var index = _.indexBy(data, function(d){ return buildKey(d.feature) });				
+		var byKey = _.groupBy(data, function(d){ return buildKey(d.feature) });				
 		var similarTiles = clusters.map(function(group){
-			return group.map(function(feature){
-				return index[buildKey(feature)].tile;
-			});
+			return group.reduce(function(list, feature){
+				return list.concat(_.pluck(byKey[buildKey(feature)], 'tile'));
+			}, []);
 		});
 		
 		return similarTiles;
