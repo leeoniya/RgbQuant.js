@@ -35,6 +35,8 @@ var opts = {
     dithSerp: false,    // enable serpentine pattern dithering
     palette: [],        // a predefined palette to start with in r,g,b tuple format: [[r,g,b],[r,g,b]...]
     reIndex: false,     // affects predefined palettes only. if true, allows compacting of sparsed palette once target palette size is reached. also enables palette sorting.
+    useCache: true,     // enables caching for perf usually, but can reduce perf in some cases, like pre-def palettes
+    cacheFreq: 10,      // min color occurance count needed to qualify for caching
 };
 
 var q = new RgbQuant(opts);
