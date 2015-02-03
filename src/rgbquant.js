@@ -717,7 +717,7 @@
 		bd = 255,
 		maxDist = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd);
 
-
+/*
 	// returns perceptual Euclidean color distance
 	function colorDist(rgb0, rgb1) {
 		var rd = rgb1[0]-rgb0[0],
@@ -725,6 +725,13 @@
 			bd = rgb1[2]-rgb0[2];
 
 		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd) / maxDist;
+	}
+*/
+	function colorDist(rgb0, rgb1) {
+		return RgbQuant.ciede2000(
+			RgbQuant.rgb_to_lab(rgb0[0], rgb0[1], rgb0[2]),
+			RgbQuant.rgb_to_lab(rgb1[0], rgb1[1], rgb1[2])
+		);
 	}
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php

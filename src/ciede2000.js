@@ -50,9 +50,10 @@
 	* @param {rgbcolor} c should have fields R,G,B
 	* @return {labcolor} c converted to labcolor
 	*/
-	function rgb_to_lab(c)
+	function rgb_to_lab(r, g, b)
 	{
-	  return xyz_to_lab(rgb_to_xyz(c))
+	  var xyz = rgb_to_xyz(r, g, b);
+	  return xyz_to_lab(xyz[0], xyz[1], xyz[2]);
 	}
 
 	/**
@@ -60,12 +61,12 @@
 	* @param {rgbcolor} c should have fields R,G,B
 	* @return {xyzcolor} c converted to xyzcolor
 	*/
-	function rgb_to_xyz(c)
+	function rgb_to_xyz(r, g, b)
 	{
 	  // Based on http://www.easyrgb.com/index.php?X=MATH&H=02
-	  var R = ( c.R / 255 );
-	  var G = ( c.G / 255 );
-	  var B = ( c.B / 255 );
+	  var R = ( r / 255 );
+	  var G = ( g / 255 );
+	  var B = ( b / 255 );
 
 	  if ( R > 0.04045 ) R = pow(( ( R + 0.055 ) / 1.055 ),2.4);
 	  else               R = R / 12.92;
@@ -82,7 +83,7 @@
 	  var X = R * 0.4124 + G * 0.3576 + B * 0.1805;
 	  var Y = R * 0.2126 + G * 0.7152 + B * 0.0722;
 	  var Z = R * 0.0193 + G * 0.1192 + B * 0.9505;
-	  return {'X' : X, 'Y' : Y, 'Z' : Z};
+	  return [X, Y, Z];
 	}
 
 	/**
@@ -90,15 +91,15 @@
 	* @param {xyzcolor} c should have fields X,Y,Z
 	* @return {labcolor} c converted to labcolor
 	*/
-	function xyz_to_lab(c)
+	function xyz_to_lab(x, y, z)
 	{
 	  // Based on http://www.easyrgb.com/index.php?X=MATH&H=07
 	  var ref_Y = 100.000;
 	  var ref_Z = 108.883;
 	  var ref_X = 95.047; // Observer= 2°, Illuminant= D65
-	  var Y = c.Y / ref_Y;
-	  var Z = c.Z / ref_Z;
-	  var X = c.X / ref_X;
+	  var Y = y / ref_Y;
+	  var Z = z / ref_Z;
+	  var X = x / ref_X;
 	  if ( X > 0.008856 ) X = pow(X, 1/3);
 	  else                X = ( 7.787 * X ) + ( 16 / 116 );
 	  if ( Y > 0.008856 ) Y = pow(Y, 1/3);
@@ -108,7 +109,7 @@
 	  var L = ( 116 * Y ) - 16;
 	  var a = 500 * ( X - Y );
 	  var b = 200 * ( Y - Z );
-	  return {'L' : L , 'a' : a, 'b' : b};
+	  return [L, a, b];
 	}
 
 	// Local Variables:
@@ -117,7 +118,7 @@
 	// End:
 
 
-	//------------------diff.js------------------------//	
+	//------------------diff.js------------------------//
 	/**
 	* EXPORTS
 	*/
@@ -145,7 +146,7 @@
 	* @param {labcolor} c2    Should have fields L,a,b
 	* @return {float}   Difference between c1 and c2
 	*/
-	function ciede2000(c1,c2)
+	function ciede2000(lab1, lab2)
 	{
 	  /**
 	   * Implemented as in "The CIEDE2000 Color-Difference Formula:
@@ -154,14 +155,14 @@
 	   */
 
 	  // Get L,a,b values for color 1
-	  var L1 = c1.L;
-	  var a1 = c1.a;
-	  var b1 = c1.b;
+	  var L1 = lab1[0];
+	  var a1 = lab1[1];
+	  var b1 = lab1[2];
 
 	  // Get L,a,b values for color 2
-	  var L2 = c2.L;
-	  var a2 = c2.a;
-	  var b2 = c2.b;
+	  var L2 = lab2[0];
+	  var a2 = lab2[1];
+	  var b2 = lab2[2];
 
 	  // Weight factors
 	  var kL = 1;
