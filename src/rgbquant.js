@@ -60,6 +60,8 @@
 		this.cacheFreq = opts.cacheFreq || 10;
 		// allows pre-defined palettes to be re-indexed (enabling palette compacting and sorting)
 		this.reIndex = opts.reIndex || this.idxrgb.length == 0;
+		// selection of color-distance equation
+		this.colorDist = opts.colorDist == "manhattan" ? distManhattan : distEuclidean;
 
 		// if pre-defined palette, build lookups
 		if (this.idxrgb.length > 0) {
@@ -266,7 +268,7 @@
 
 				// dithering strength
 				if (this.dithDelta) {
-					var dist = colorDist([r1, g1, b1], [r2, g2, b2]);
+					var dist = this.colorDist([r1, g1, b1], [r2, g2, b2]);
 					if (dist < this.dithDelta)
 						continue;
 				}
@@ -450,7 +452,7 @@
 							var pxj = idxrgb[j], i32j = idxi32[j];
 							if (!pxj) continue;
 
-							var dist = colorDist(pxi, pxj);
+							var dist = this.colorDist(pxi, pxj);
 
 							if (dist < thold) {
 								// store index,rgb,dist
@@ -626,7 +628,7 @@
 		for (var i = 0; i < len; i++) {
 			if (!this.idxrgb[i]) continue;		// sparse palettes
 
-			var dist = colorDist(rgb, this.idxrgb[i]);
+			var dist = this.colorDist(rgb, this.idxrgb[i]);
 
 			if (dist < min) {
 				min = dist;
@@ -714,17 +716,26 @@
 
 	var rd = 255,
 		gd = 255,
-		bd = 255,
-		maxDist = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd);
+		bd = 255;
 
-
-	// returns perceptual Euclidean color distance
-	function colorDist(rgb0, rgb1) {
+	var euclMax = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd);
+	// perceptual Euclidean color distance
+	function distEuclidean(rgb0, rgb1) {
 		var rd = rgb1[0]-rgb0[0],
 			gd = rgb1[1]-rgb0[1],
 			bd = rgb1[2]-rgb0[2];
 
-		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd) / maxDist;
+		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd) / euclMax;
+	}
+
+	var manhMax = Pr*rd + Pg*gd + Pb*bd;
+	// perceptual Manhattan color distance
+	function distManhattan(rgb0, rgb1) {
+		var rd = Math.abs(rgb1[0]-rgb0[0]),
+			gd = Math.abs(rgb1[1]-rgb0[1]),
+			bd = Math.abs(rgb1[2]-rgb0[2]);
+
+		return (Pr*rd + Pg*gd + Pb*bd) / manhMax;
 	}
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php
