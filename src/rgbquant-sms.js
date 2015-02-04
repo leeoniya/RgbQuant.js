@@ -37,7 +37,6 @@
 	RgbQuantSMS.prototype.sample = function sample(img, width) {
 		var rgbImg = this.tempQuant.toRgbImage(img, width);		
 		this.imagesToSample.push(rgbImg);
-		this.tempQuant.sample(rgbImg);
 	}
 	
 	/**
@@ -50,6 +49,10 @@
 		}
 				
 		var self = this;
+		
+		this.imagesToSample.forEach(function(img){
+			self.tempQuant.sample(img);
+		});
 		var palette = this.tempQuant.palette(true);
 		
 		var tilesToClusterize = _.flatten(this.imagesToSample.map(function(img){
@@ -541,23 +544,29 @@
 				};
 			});
 
-			var originalColors = _.flatten(allTriplets.slice(tileOfs, tileOfs + 8 * 8));
-			var winner = _.chain(candidates).map(function(candidate){
-				var palette = tileMap.palettes[candidate.palNum];
-				var reducedColors = _.chain(candidate.pixels).flatten().map(function(colorIndex){
-					return palette[colorIndex];
-				}).flatten().value();
-				var difference = _.zip(originalColors, reducedColors).reduce(function(total, pair){
-					var difference = pair[0] - pair[1];
-					return total + difference * difference;
-				}, 0);
-			
-				return {
-					palNum: candidate.palNum,
-					pixels: candidate.pixels,
-					difference: difference
-				};
-			}).min(function(o){ return o.difference }).value();
+			if (candidates.length == 1) {
+				// If there's only one candidate, the winner is obvious
+				var winner = candidates[0];
+			} else {
+				// If there's more than one candidate, checks which contains the least amount of error.
+				var originalColors = _.flatten(allTriplets.slice(tileOfs, tileOfs + 8 * 8));
+				var winner = _.chain(candidates).map(function(candidate){
+					var palette = tileMap.palettes[candidate.palNum];
+					var reducedColors = _.chain(candidate.pixels).flatten().map(function(colorIndex){
+						return palette[colorIndex];
+					}).flatten().value();
+					var difference = _.zip(originalColors, reducedColors).reduce(function(total, pair){
+						var difference = pair[0] - pair[1];
+						return total + difference * difference;
+					}, 0);
+				
+					return {
+						palNum: candidate.palNum,
+						pixels: candidate.pixels,
+						difference: difference
+					};
+				}).min(function(o){ return o.difference }).value();
+			}
 			
 			newTile.palNum = winner.palNum;
 			newTile.pixels = winner.pixels;
