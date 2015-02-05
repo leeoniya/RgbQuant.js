@@ -529,6 +529,32 @@ function randomCentroids(points, k) {
    return centroids.slice(0, k);
 }
 
+function evenlyDistributedCentroids(points, k) {
+   var centroids = points.slice(0); // copy
+   if (centroids.length < k) {
+      return centroids;
+   }
+   
+   centroids.sort(function(a, b){
+      var len = Math.max(a.length, b.length);
+      for (var i = 0; i < len; i++) {
+         var diff = (a[i] || 0) - (b[i] || 0);
+         if (diff) {
+            return diff;
+         }
+      }
+      return 0;
+   });
+   
+   var result = [];
+   var delta = centroids.length / k;
+   var pos = 0;
+   for (var i = 0, pos = 0; i < k; i++, pos += delta) {
+      result.push(centroids[Math.floor(pos)]);
+   }
+   return result;
+}
+
 function closestCentroid(point, centroids, distance) {
    var min = Infinity,
        index = 0;
@@ -548,7 +574,7 @@ function kmeans(points, k, distance, snapshotPeriod, snapshotCb) {
       distance = distances[distance];
    }
    
-   var centroids = randomCentroids(points, k);
+   var centroids = evenlyDistributedCentroids(points, k);
    var assignment = new Array(points.length);
    var clusters = new Array(k);
 
