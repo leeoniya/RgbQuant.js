@@ -55,6 +55,34 @@ var outA = q.reduce(imgA),
     outB = q.reduce(imgB),
     outC = q.reduce(imgC);
 ```
+### Node.js
+
+npm package: https://www.npmjs.com/package/rgbquant
+example with https://www.npmjs.com/package/canvas
+
+```js
+var fs = require('fs'),
+	Canvas = require('canvas'),
+	Image = Canvas.Image,
+	RgbQuant = require('rgbquant');
+
+var imgPath = "./test.png",
+	img, can, ctx, q, pal, out;
+
+fs.readFile(imgPath, function(err, data) {
+	img = new Image;
+	img.src = data;
+
+	can = new Canvas(img.width, img.height);
+	ctx = can.getContext('2d');
+	ctx.drawImage(img, 0, 0, img.width, img.height);
+
+	q = new RgbQuant();
+	q.sample(can);
+	pal = q.palette(true);
+	out = q.reduce(can);
+});
+```
 
 ---
 ### Docs
