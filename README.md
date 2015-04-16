@@ -57,8 +57,7 @@ var outA = q.reduce(imgA),
 ```
 ### Node.js
 
-npm package: https://www.npmjs.com/package/rgbquant
-
+npm package: https://www.npmjs.com/package/rgbquant  
 example with https://www.npmjs.com/package/canvas
 
 ```js
