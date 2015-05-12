@@ -255,8 +255,6 @@
 					b1 = (i32 >>> 16) & 0xff,
 					a1 = (i32 >>> 24) & 0xff;
 
-				ASSERT(i32 > 0, "negative color. use >>> 0 to avoid it");
-
 				// Reduced pixel
 				var i32x = this.nearestColor(i32),
 					r2 = (i32x & 0xff),
