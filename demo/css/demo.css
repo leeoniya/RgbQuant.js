@@ -92,3 +92,22 @@ input[type="text"] {
 pre {
 	margin: 10px 0 0  0;
 }
+
+#orig, #redu {
+	background-image:
+	-moz-linear-gradient(45deg, #000 25%, transparent 25%),
+	-moz-linear-gradient(-45deg, #000 25%, transparent 25%),
+	-moz-linear-gradient(45deg, transparent 75%, #000 75%),
+	-moz-linear-gradient(-45deg, transparent 75%, #000 75%);
+	background-image:
+	-webkit-gradient(linear, 0 100%, 100% 0, color-stop(.25, #000), color-stop(.25, transparent)),
+	-webkit-gradient(linear, 0 0, 100% 100%, color-stop(.25, #000), color-stop(.25, transparent)),
+	-webkit-gradient(linear, 0 100%, 100% 0, color-stop(.75, transparent), color-stop(.75, #000)),
+	-webkit-gradient(linear, 0 0, 100% 100%, color-stop(.75, transparent), color-stop(.75, #000));
+
+	-moz-background-size:20px 20px;
+	background-size:20px 20px;
+	-webkit-background-size:20px 21px; /* override value for shitty webkit */
+
+	background-position:0 0, 10px 0, 10px -10px, 0px 10px;
+}
