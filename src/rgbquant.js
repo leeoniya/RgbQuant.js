@@ -65,19 +65,19 @@
 
 		// if pre-defined palette, build lookups
 		if (this.idxrgb.length > 0) {
-			var self = this;
 			this.idxrgb.forEach(function(rgb, i) {
-				var i32 = (
-					(255    << 24) |	// alpha
-					(rgb[2] << 16) |	// blue
-					(rgb[1] <<  8) |	// green
-					 rgb[0]				// red
-				) >>> 0;
+				var alpha = rgb.length >= 4 ? rgb[3] : 255,
+					i32 = (
+						(alpha << 24) |	// alpha
+						(rgb[2] << 16) |	// blue
+						(rgb[1] <<  8) |	// green
+					 	rgb[0]				// red
+					) >>> 0;
 
-				self.idxi32[i]		= i32;
-				self.i32idx[i32]	= i;
-				self.i32rgb[i32]	= rgb;
-			});
+				this.idxi32[i]		= i32;
+				this.i32idx[i32]	= i;
+				this.i32rgb[i32]	= rgb;
+			}, this);
 		}
 	}
 
@@ -222,7 +222,7 @@
 				[2 / 4, 1, 0],
 				[1 / 4, -1, 1],
 				[1 / 4, 0, 1],
-			],
+			]
 		};
 
 		if (!kernel || !kernels[kernel]) {
@@ -251,24 +251,29 @@
 				var idx = lni + x,
 					i32 = buf32[idx],
 					r1 = (i32 & 0xff),
-					g1 = (i32 & 0xff00) >> 8,
-					b1 = (i32 & 0xff0000) >> 16;
+					g1 = (i32 >>> 8) & 0xff,
+					b1 = (i32 >>> 16) & 0xff,
+					a1 = (i32 >>> 24) & 0xff;
+
+				ASSERT(i32 > 0, "negative color. use >>> 0 to avoid it");
 
 				// Reduced pixel
 				var i32x = this.nearestColor(i32),
 					r2 = (i32x & 0xff),
-					g2 = (i32x & 0xff00) >> 8,
-					b2 = (i32x & 0xff0000) >> 16;
+					g2 = (i32x >>> 8) & 0xff,
+					b2 = (i32x >>> 16) & 0xff,
+					a2 = (i32x >>> 24) & 0xff;
 
-				buf32[idx] =
-					(255 << 24)	|	// alpha
+				buf32[idx] = (
+					(a2 << 24)	|	// alpha
 					(b2  << 16)	|	// blue
 					(g2  <<  8)	|	// green
-					 r2;
+					 r2 			// red
+					) >>> 0;
 
 				// dithering strength
 				if (this.dithDelta) {
-					var dist = this.colorDist([r1, g1, b1], [r2, g2, b2]);
+					var dist = this.colorDist([r1, g1, b1, a1], [r2, g2, b2, a2]);
 					if (dist < this.dithDelta)
 						continue;
 				}
@@ -276,7 +281,8 @@
 				// Component distance
 				var er = r1 - r2,
 					eg = g1 - g2,
-					eb = b1 - b2;
+					eb = b1 - b2,
+					ea = a1 - a2;
 
 				for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
 					var x1 = ds[i][1] * dir,
@@ -289,18 +295,21 @@
 						var idx2 = idx + (lni2 + x1);
 
 						var r3 = (buf32[idx2] & 0xff),
-							g3 = (buf32[idx2] & 0xff00) >> 8,
-							b3 = (buf32[idx2] & 0xff0000) >> 16;
+							g3 = (buf32[idx2] >>> 8) & 0xff,
+							b3 = (buf32[idx2] >>> 16) & 0xff,
+							a3 = (buf32[idx2] >>> 24) & 0xff;
 
 						var r4 = Math.max(0, Math.min(255, r3 + er * d)),
 							g4 = Math.max(0, Math.min(255, g3 + eg * d)),
-							b4 = Math.max(0, Math.min(255, b3 + eb * d));
+							b4 = Math.max(0, Math.min(255, b3 + eb * d)),
+							a4 = Math.max(0, Math.min(255, a3 + ea * d));
 
-						buf32[idx2] =
-							(255 << 24)	|	// alpha
+						buf32[idx2] = (
+							(a4 << 24)	|	// alpha
 							(b4  << 16)	|	// blue
 							(g4  <<  8)	|	// green
-							 r4;			// red
+							 r4				// red
+						) >>> 0;
 					}
 				}
 			}
@@ -429,8 +438,9 @@
 			var idxrgb = idxi32.map(function(i32) {
 				return [
 					(i32 & 0xff),
-					(i32 & 0xff00) >> 8,
-					(i32 & 0xff0000) >> 16,
+					(i32 >>> 8) & 0xff,
+					(i32 >>> 16) & 0xff,
+					(i32 >>> 24) & 0xff
 				];
 			});
 
@@ -534,22 +544,21 @@
 			boxH = this.boxSize[1],
 			area = boxW * boxH,
 			boxes = makeBoxes(width, buf32.length / width, boxW, boxH),
-			histG = this.histogram,
-			self = this;
+			histG = this.histogram;
 
 		boxes.forEach(function(box) {
-			var effc = Math.max(Math.round((box.w * box.h) / area) * self.boxPxls, 2),
+			var effc = Math.max(Math.round((box.w * box.h) / area) * this.boxPxls, 2),
 				histL = {}, col;
 
-			iterBox(box, width, function(i) {
+			this.iterBox(box, width, function(i) {
 				col = buf32[i];
 
 				// skip transparent
 				if ((col & 0xff000000) >> 24 == 0) return;
 
 				// collect hue stats
-				if (self.hueStats)
-					self.hueStats.check(col);
+				if (this.hueStats)
+					this.hueStats.check(col);
 
 				if (col in histG)
 					histG[col]++;
@@ -560,7 +569,7 @@
 				else
 					histL[col] = 1;
 			});
-		});
+		}, this);
 
 		if (this.hueStats)
 			this.hueStats.inject(histG);
@@ -596,9 +605,22 @@
 
 		// sync idxrgb & i32idx
 		this.idxi32.forEach(function(i32, i) {
-			self.idxrgb[i] = self.i32rgb[i32];
-			self.i32idx[i32] = i;
-		});
+			this.idxrgb[i] = this.i32rgb[i32];
+			this.i32idx[i32] = i;
+		}, this);
+	};
+
+	// iterates @bbox within a parent rect of width @wid; calls @fn, passing index within parent
+	RgbQuant.prototype.iterBox = function(bbox, wid, fn) {
+		var b = bbox,
+			i0 = b.y * wid + b.x,
+			i1 = (b.y + b.h - 1) * wid + (b.x + b.w - 1),
+			cnt = 0, incr = wid - b.w + 1, i = i0;
+
+		do {
+			fn.call(this, i);
+			i += (++cnt % b.w == 0) ? incr : 1;
+		} while (i <= i1);
 	};
 
 	// TOTRY: use HUSL - http://boronine.com/husl/
@@ -620,8 +642,9 @@
 			idx,
 			rgb = [
 				(i32 & 0xff),
-				(i32 & 0xff00) >> 8,
-				(i32 & 0xff0000) >> 16,
+				(i32 >>> 8) & 0xff,
+				(i32 >>> 16) & 0xff,
+				(i32 >>> 24) & 0xff
 			],
 			len = this.idxrgb.length;
 
@@ -660,8 +683,9 @@
 			this.check = function() {return;};
 
 		var r = (i32 & 0xff),
-			g = (i32 & 0xff00) >> 8,
-			b = (i32 & 0xff0000) >> 16,
+			g = (i32 >>> 8) & 0xff,
+			b = (i32 >>> 16) & 0xff,
+			a = (i32 >>> 24) & 0xff,
 			hg = (r == g && g == b) ? -1 : hueGroup(rgb2hsl(r,g,b).h, this.numGroups),
 			gr = this.stats[hg],
 			min = this.minCols;
@@ -703,7 +727,8 @@
 	// Rec. 709 (sRGB) luma coef
 	var Pr = .2126,
 		Pg = .7152,
-		Pb = .0722;
+		Pb = .0722,
+		Pa = 1; // TODO: (igor-bezkrovny) what should be here?
 
 	// http://alienryderflex.com/hsp.html
 	function rgb2lum(r,g,b) {
@@ -716,26 +741,29 @@
 
 	var rd = 255,
 		gd = 255,
-		bd = 255;
+		bd = 255,
+		ad = 255;
 
-	var euclMax = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd);
+	var euclMax = Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd + Pa*ad*ad);
 	// perceptual Euclidean color distance
 	function distEuclidean(rgb0, rgb1) {
 		var rd = rgb1[0]-rgb0[0],
 			gd = rgb1[1]-rgb0[1],
-			bd = rgb1[2]-rgb0[2];
+			bd = rgb1[2]-rgb0[2],
+			ad = rgb1[3]-rgb0[3];
 
-		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd) / euclMax;
+		return Math.sqrt(Pr*rd*rd + Pg*gd*gd + Pb*bd*bd + Pa*ad*ad) / euclMax;
 	}
 
-	var manhMax = Pr*rd + Pg*gd + Pb*bd;
+	var manhMax = Pr*rd + Pg*gd + Pb*bd + Pa*ad;
 	// perceptual Manhattan color distance
 	function distManhattan(rgb0, rgb1) {
 		var rd = Math.abs(rgb1[0]-rgb0[0]),
 			gd = Math.abs(rgb1[1]-rgb0[1]),
-			bd = Math.abs(rgb1[2]-rgb0[2]);
+			bd = Math.abs(rgb1[2]-rgb0[2]),
+			ad = Math.abs(rgb1[3]-rgb0[3]);
 
-		return (Pr*rd + Pg*gd + Pb*bd) / manhMax;
+		return (Pr*rd + Pg*gd + Pb*bd + Pa*ad) / manhMax;
 	}
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php
@@ -765,7 +793,7 @@
 		return {
 			h: h,
 			s: s,
-			l: rgb2lum(r,g,b),
+			l: rgb2lum(r,g,b)
 		};
 	}
 
@@ -880,7 +908,7 @@
 			buf8: buf8,
 			buf32: buf32,
 			width: width,
-			height: height,
+			height: height
 		};
 	}
 
@@ -897,19 +925,6 @@
 				bxs.push({x:x, y:y, w:(x==xend?wrem:w0), h:(y==yend?hrem:h0)});
 
 		return bxs;
-	}
-
-	// iterates @bbox within a parent rect of width @wid; calls @fn, passing index within parent
-	function iterBox(bbox, wid, fn) {
-		var b = bbox,
-			i0 = b.y * wid + b.x,
-			i1 = (b.y + b.h - 1) * wid + (b.x + b.w - 1),
-			cnt = 0, incr = wid - b.w + 1, i = i0;
-
-		do {
-			fn.call(this, i);
-			i += (++cnt % b.w == 0) ? incr : 1;
-		} while (i <= i1);
 	}
 
 	// returns array of hash keys sorted by their values
