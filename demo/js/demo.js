@@ -93,7 +93,7 @@ function process(srcs) {
 		});
 
 		var opts = (srcs.length == 1) ? getOpts(baseName(srcs[0])[0]) : dflt_opts,
-			quant = new RgbQuant(opts);
+			quant = new ColorQuantization.RgbQuant(opts);
 
 		$.each(imgs, function() {
 			var img = this, id = baseName(img.src)[0];

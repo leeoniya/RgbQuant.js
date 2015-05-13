@@ -14,7 +14,7 @@
 		// desired final palette size
 		this.colors = opts.colors || 256;
 		// # of highest-frequency colors to start with for palette reduction
-		this.initColors = opts.initColors || 4096;
+		this.initColors = this.colors << 2;//opts.initColors || 65536; //4096;
 		// color-distance threshold for initial reduction pass
 		this.initDist = opts.initDist || 0.01;
 		// subsequent passes threshold
@@ -24,7 +24,7 @@
 		this.satGroups = opts.satGroups || 10;
 		this.lumGroups = opts.lumGroups || 10;
 		// if > 0, enables hues stats and min-color retention per group
-		this.minHueCols = opts.minHueCols || 0;
+		this.minHueCols = this.colors << 2;//opts.minHueCols || 0;
 		// HueStats instance
 		this.hueStats = this.minHueCols ? new HueStats(this.hueGroups, this.minHueCols) : null;
 
@@ -40,7 +40,7 @@
 		// dithering/error diffusion kernel name
 		this.dithKern = opts.dithKern || null;
 		// dither serpentine pattern
-		this.dithSerp = opts.dithSerp || false;
+		this.dithSerp = true; //opts.dithSerp || false;
 		// minimum color difference (0-1) needed to dither
 		this.dithDelta = opts.dithDelta || 0;
 
@@ -107,18 +107,20 @@
 		retType = retType || 1;
 
 		// reduce w/dither
+		var buf32;
 		if (dithKern)
-			var out32 = this.dither(img, dithKern, dithSerp);
+			buf32 = this.dither(img, dithKern, dithSerp);
 		else {
-			var data = getImageData(img),
-				buf32 = data.buf32,
-				len = buf32.length,
-				out32 = new Uint32Array(len);
+			var data = getImageData(img);
+			buf32 = data.buf32;
+		}
 
-			for (var i = 0; i < len; i++) {
-				var i32 = buf32[i];
-				out32[i] = this.nearestColor(i32);
-			}
+		var len = buf32.length,
+			out32 = new Uint32Array(len);
+
+		for (var i = 0; i < len; i++) {
+			var i32 = buf32[i];
+			out32[i] = this.nearestColor(i32);
 		}
 
 		if (retType == 1)
@@ -137,94 +139,94 @@
 		}
 	};
 
+	// http://www.tannerhelland.com/4660/dithering-eleven-algorithms-source-code/
+	var kernels = {
+		FloydSteinberg: [
+			[7 / 16, 1, 0],
+			[3 / 16, -1, 1],
+			[5 / 16, 0, 1],
+			[1 / 16, 1, 1]
+		],
+		FalseFloydSteinberg: [
+			[3 / 8, 1, 0],
+			[3 / 8, 0, 1],
+			[2 / 8, 1, 1]
+		],
+		Stucki: [
+			[8 / 42, 1, 0],
+			[4 / 42, 2, 0],
+			[2 / 42, -2, 1],
+			[4 / 42, -1, 1],
+			[8 / 42, 0, 1],
+			[4 / 42, 1, 1],
+			[2 / 42, 2, 1],
+			[1 / 42, -2, 2],
+			[2 / 42, -1, 2],
+			[4 / 42, 0, 2],
+			[2 / 42, 1, 2],
+			[1 / 42, 2, 2]
+		],
+		Atkinson: [
+			[1 / 8, 1, 0],
+			[1 / 8, 2, 0],
+			[1 / 8, -1, 1],
+			[1 / 8, 0, 1],
+			[1 / 8, 1, 1],
+			[1 / 8, 0, 2]
+		],
+		Jarvis: [			// Jarvis, Judice, and Ninke / JJN?
+			[7 / 48, 1, 0],
+			[5 / 48, 2, 0],
+			[3 / 48, -2, 1],
+			[5 / 48, -1, 1],
+			[7 / 48, 0, 1],
+			[5 / 48, 1, 1],
+			[3 / 48, 2, 1],
+			[1 / 48, -2, 2],
+			[3 / 48, -1, 2],
+			[5 / 48, 0, 2],
+			[3 / 48, 1, 2],
+			[1 / 48, 2, 2]
+		],
+		Burkes: [
+			[8 / 32, 1, 0],
+			[4 / 32, 2, 0],
+			[2 / 32, -2, 1],
+			[4 / 32, -1, 1],
+			[8 / 32, 0, 1],
+			[4 / 32, 1, 1],
+			[2 / 32, 2, 1],
+		],
+		Sierra: [
+			[5 / 32, 1, 0],
+			[3 / 32, 2, 0],
+			[2 / 32, -2, 1],
+			[4 / 32, -1, 1],
+			[5 / 32, 0, 1],
+			[4 / 32, 1, 1],
+			[2 / 32, 2, 1],
+			[2 / 32, -1, 2],
+			[3 / 32, 0, 2],
+			[2 / 32, 1, 2]
+		],
+		TwoSierra: [
+			[4 / 16, 1, 0],
+			[3 / 16, 2, 0],
+			[1 / 16, -2, 1],
+			[2 / 16, -1, 1],
+			[3 / 16, 0, 1],
+			[2 / 16, 1, 1],
+			[1 / 16, 2, 1]
+		],
+		SierraLite: [
+			[2 / 4, 1, 0],
+			[1 / 4, -1, 1],
+			[1 / 4, 0, 1]
+		]
+	};
+
 	// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
 	RgbQuant.prototype.dither = function(img, kernel, serpentine) {
-		// http://www.tannerhelland.com/4660/dithering-eleven-algorithms-source-code/
-		var kernels = {
-			FloydSteinberg: [
-				[7 / 16, 1, 0],
-				[3 / 16, -1, 1],
-				[5 / 16, 0, 1],
-				[1 / 16, 1, 1]
-			],
-			FalseFloydSteinberg: [
-				[3 / 8, 1, 0],
-				[3 / 8, 0, 1],
-				[2 / 8, 1, 1]
-			],
-			Stucki: [
-				[8 / 42, 1, 0],
-				[4 / 42, 2, 0],
-				[2 / 42, -2, 1],
-				[4 / 42, -1, 1],
-				[8 / 42, 0, 1],
-				[4 / 42, 1, 1],
-				[2 / 42, 2, 1],
-				[1 / 42, -2, 2],
-				[2 / 42, -1, 2],
-				[4 / 42, 0, 2],
-				[2 / 42, 1, 2],
-				[1 / 42, 2, 2]
-			],
-			Atkinson: [
-				[1 / 8, 1, 0],
-				[1 / 8, 2, 0],
-				[1 / 8, -1, 1],
-				[1 / 8, 0, 1],
-				[1 / 8, 1, 1],
-				[1 / 8, 0, 2]
-			],
-			Jarvis: [			// Jarvis, Judice, and Ninke / JJN?
-				[7 / 48, 1, 0],
-				[5 / 48, 2, 0],
-				[3 / 48, -2, 1],
-				[5 / 48, -1, 1],
-				[7 / 48, 0, 1],
-				[5 / 48, 1, 1],
-				[3 / 48, 2, 1],
-				[1 / 48, -2, 2],
-				[3 / 48, -1, 2],
-				[5 / 48, 0, 2],
-				[3 / 48, 1, 2],
-				[1 / 48, 2, 2]
-			],
-			Burkes: [
-				[8 / 32, 1, 0],
-				[4 / 32, 2, 0],
-				[2 / 32, -2, 1],
-				[4 / 32, -1, 1],
-				[8 / 32, 0, 1],
-				[4 / 32, 1, 1],
-				[2 / 32, 2, 1],
-			],
-			Sierra: [
-				[5 / 32, 1, 0],
-				[3 / 32, 2, 0],
-				[2 / 32, -2, 1],
-				[4 / 32, -1, 1],
-				[5 / 32, 0, 1],
-				[4 / 32, 1, 1],
-				[2 / 32, 2, 1],
-				[2 / 32, -1, 2],
-				[3 / 32, 0, 2],
-				[2 / 32, 1, 2],
-			],
-			TwoSierra: [
-				[4 / 16, 1, 0],
-				[3 / 16, 2, 0],
-				[1 / 16, -2, 1],
-				[2 / 16, -1, 1],
-				[3 / 16, 0, 1],
-				[2 / 16, 1, 1],
-				[1 / 16, 2, 1],
-			],
-			SierraLite: [
-				[2 / 4, 1, 0],
-				[1 / 4, -1, 1],
-				[1 / 4, 0, 1],
-			]
-		};
-
 		if (!kernel || !kernels[kernel]) {
 			throw 'Unknown dithering kernel: ' + kernel;
 		}
@@ -240,6 +242,7 @@
 
 		var dir = serpentine ? -1 : 1;
 
+		console.profile("dither");
 		for (var y = 0; y < height; y++) {
 			if (serpentine)
 				dir = dir * -1;
@@ -262,12 +265,7 @@
 					b2 = (i32x >>> 16) & 0xff,
 					a2 = (i32x >>> 24) & 0xff;
 
-				buf32[idx] = (
-					(a2 << 24)	|	// alpha
-					(b2  << 16)	|	// blue
-					(g2  <<  8)	|	// green
-					 r2 			// red
-					) >>> 0;
+				buf32[idx] = i32x;
 
 				// dithering strength
 				if (this.dithDelta) {
@@ -290,12 +288,13 @@
 
 					if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
 						var d = ds[i][0];
-						var idx2 = idx + (lni2 + x1);
+						var idx2 = idx + (lni2 + x1),
+							i32y = buf32[idx2];
 
-						var r3 = (buf32[idx2] & 0xff),
-							g3 = (buf32[idx2] >>> 8) & 0xff,
-							b3 = (buf32[idx2] >>> 16) & 0xff,
-							a3 = (buf32[idx2] >>> 24) & 0xff;
+						var r3 = (i32y & 0xff),
+							g3 = (i32y >>> 8) & 0xff,
+							b3 = (i32y >>> 16) & 0xff,
+							a3 = (i32y >>> 24) & 0xff;
 
 						var r4 = Math.max(0, Math.min(255, r3 + er * d)),
 							g4 = Math.max(0, Math.min(255, g3 + eg * d)),
@@ -308,11 +307,13 @@
 							(g4  <<  8)	|	// green
 							 r4				// red
 						) >>> 0;
+
+						//if(this.idxi32.indexOf(buf32[idx2]) < 0) throw new Error("no palette entry!");
 					}
 				}
 			}
 		}
-
+		console.profileEnd("dither");
 		return buf32;
 	};
 
@@ -678,7 +679,7 @@
 
 	HueStats.prototype.check = function checkHue(i32) {
 		if (this.groupsFull == this.numGroups + 1)
-			this.check = function() {return;};
+			this.check = function() {};
 
 		var r = (i32 & 0xff),
 			g = (i32 >>> 8) & 0xff,
@@ -762,6 +763,72 @@
 			ad = Math.abs(rgb1[3]-rgb0[3]);
 
 		return (Pr*rd + Pg*gd + Pb*bd + Pa*ad) / manhMax;
+	}
+
+	/*
+	Finally, I've found it! After thorough testing and experimentation my conclusions are:
+
+The correct way is to calculate maximum possible difference between the two colors.
+Formulas with any kind of estimated average/typical difference had room for non-linearities.
+
+I was unable to find correct formula that calculates the distance without blending RGBA colors with backgrounds.
+
+There is no need to take every possible background color into account, only extremes per R/G/B channel, i.e. for red channel:
+
+blend both colors with 0 red as background, measure squared difference
+blend both colors with max red background, measure squared difference
+take higher of the two.
+Fortunately blending with "white" and "black" is trivial when you use premultiplied alpha (r = r×a).
+
+The complete formula is:
+	max((r?-r?)², (r?-r? - a?+a?)²) +
+max((g?-g?)², (g?-g? - a?+a?)²) +
+max((b?-b?)², (b?-b? - a?+a?)²)
+	 */
+	function colordifference_ch(x, y, alphas) {
+		// maximum of channel blended on white, and blended on black
+		// premultiplied alpha and backgrounds 0/1 shorten the formula
+		var black = x - y, // [-255; 255]
+			white = black + alphas; // [-255; 255*2]
+
+		return Math.max(black*black, white*white); // [0; 255^2 + (255*2)^2]
+	}
+
+	//var rgbaMax = (255*255 + (255*2) * (255*2)) * 3;
+	var rgbaMax = Math.pow(255<<1, 2) * 3;
+
+	function distRGBA(rgb0, rgb1) {
+/*
+		var r1 = rgb0[0],
+			g1 = rgb0[1],
+			b1 = rgb0[2],
+			a1 = rgb0[3];
+
+		var r2 = rgb1[0],
+			g2 = rgb1[1],
+			b2 = rgb1[2],
+			a2 = rgb1[3];
+
+		var dr = r1 - r2,
+			dg = g1 - g2,
+			db = b1 - b2,
+			da = a1 - a2;
+
+		return (Math.max(dr << 1, dr - da << 1) +
+			Math.max(dg << 1, dg - da << 1) +
+			Math.max(db << 1, db - da << 1)) / rgbaMax;
+
+*/
+		var alphas = rgb1[3] - rgb0[3],
+			dist = colordifference_ch(rgb0[0], rgb1[0], alphas) +
+				colordifference_ch(rgb0[1], rgb1[1], alphas) +
+				colordifference_ch(rgb0[2], rgb1[2], alphas);
+
+		if(dist > rgbaMax) {
+			console.log(dist);
+		}
+
+		return dist / rgbaMax;
 	}
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php
