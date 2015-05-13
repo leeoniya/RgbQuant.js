@@ -1,4 +1,10 @@
+/// <reference path='./utils.ts' />
 module ColorQuantization {
+
+	class HueGroup {
+		public num : number = 0;
+		public cols : number[] = [];
+	}
 
 	export class HueStatistics {
 		private _numGroups;
@@ -6,13 +12,14 @@ module ColorQuantization {
 		private _stats;
 		private _groupsFull;
 
-		constructor(numGroups, minCols) {
+		constructor(numGroups : number, minCols : number) {
 			this._numGroups = numGroups;
 			this._minCols = minCols;
 			this._stats = {};
 
-			for (var i = -1; i < numGroups; i++)
-				this._stats[ i ] = {num: 0, cols: []};
+			for (var i = -1; i < numGroups; i++) {
+				this._stats[i] = new HueGroup();
+			}
 
 			this._groupsFull = 0;
 		}
@@ -27,8 +34,8 @@ module ColorQuantization {
 				g = (i32 >>> 8) & 0xff,
 				b = (i32 >>> 16) & 0xff,
 				a = (i32 >>> 24) & 0xff,
-				hg = (r == g && g == b) ? -1 : hueGroup(rgb2hsl(r, g, b).h, this._numGroups),
-				gr = this._stats[ hg ],
+				hg = (r == g && g == b) ? -1 : Utils.hueGroup(Utils.rgb2hsl(r, g, b).h, this._numGroups),
+				gr : HueGroup = this._stats[ hg ],
 				min = this._minCols;
 
 			gr.num++;
@@ -45,7 +52,7 @@ module ColorQuantization {
 		public inject(histG) {
 			for (var i = -1; i < this._numGroups; i++) {
 				if (this._stats[ i ].num <= this._minCols) {
-					switch (typeOf(histG)) {
+					switch (Utils.typeOf(histG)) {
 						case "Array":
 							this._stats[ i ].cols.forEach(function (col) {
 								if (histG.indexOf(col) == -1)
