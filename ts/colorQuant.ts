@@ -614,7 +614,7 @@ module ColorQuantization {
 				}
 			}
 
-			if(typeof idx === "undefined") throw new Error("x");
+			this._i32idx[i32] = idx;
 
 			return idx;
 		}
