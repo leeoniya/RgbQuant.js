@@ -6,17 +6,27 @@ module ColorQuantization {
 		public b : number;
 		public a : number;
 		public uint32 : number;
+		public rgba : number[]; // TODO: better name is quadruplet or quad may be?
 
 		constructor(...args : number[]) {
-			this.set(args);
+			this.set(...args);
 		}
 
-		public set(...args) {
+		public set(...args : number[]) {
 			switch(args.length) {
 				case 1:
-					this.uint32 = args[0];
-
-					this._loadRGBA();
+					if(typeof args[0] === "number") {
+						this.uint32 = args[0];
+						this._loadRGBA();
+					} else if(Utils.typeOf(args[0]) === "Array") {
+						this.r = args[0][0];
+						this.g = args[0][1];
+						this.b = args[0][2];
+						this.a = args[0][3];
+						this._loadUINT32();
+					} else {
+						throw new Error("Point.constructor/set: unsupported single parameter");
+					}
 					break;
 
 				case 4:
@@ -30,6 +40,8 @@ module ColorQuantization {
 				default:
 					throw new Error("Point.constructor/set should have parameter/s");
 			}
+
+			this._loadQuadruplet();
 		}
 
 		private _loadUINT32() {
@@ -46,6 +58,15 @@ module ColorQuantization {
 			this.g = (this.uint32 >>> 8) & 0xff;
 			this.b = (this.uint32 >>> 16) & 0xff;
 			this.a = (this.uint32 >>> 24) & 0xff;
+		}
+
+		private _loadQuadruplet() {
+			this.rgba = [
+				this.r,
+				this.g,
+				this.b,
+				this.a
+			];
 		}
 	}
 

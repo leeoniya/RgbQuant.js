@@ -1,3 +1,3 @@
 pushd %~dp0
-tsc colorQuant.ts --out colorQuant.js
+tsc colorQuant.ts --sourcemap --out colorQuant.js
 popd
