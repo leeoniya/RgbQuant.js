@@ -5,6 +5,7 @@
 * RgbQuant.js - an image quantization lib
 */
 
+/// <reference path='./hueStatistics.ts' />
 module ColorQuantization {
 
 	// Rec. 709 (sRGB) luma coef
@@ -21,7 +22,6 @@ module ColorQuantization {
 			Pb * b * b
 		);
 	}
-
 
 	// http://rgb2hsl.nichabi.com/javascript-function.php
 	function rgb2hsl(r, g, b) {
@@ -411,8 +411,8 @@ module ColorQuantization {
 		// if > 0, enables hues stats and min-color retention per group
 		private minHueCols : number;
 
-		// HueStats instance
-		private hueStats : HueStats;
+		// HueStatistics instance
+		private hueStats : HueStatistics;
 
 		// subregion partitioning box size
 		private boxSize = [ 64, 64 ];
@@ -473,8 +473,8 @@ module ColorQuantization {
 			// if > 0, enables hues stats and min-color retention per group
 			this.minHueCols = this.colors << 2;//opts.minHueCols || 0;
 
-			// HueStats instance
-			this.hueStats = this.minHueCols ? new HueStats(this.hueGroups, this.minHueCols) : null;
+			// HueStatistics instance
+			this.hueStats = this.minHueCols ? new HueStatistics(this.hueGroups, this.minHueCols) : null;
 
 			// dithering/error diffusion kernel name
 			if (typeof this.dithKern === "number") this.dithKern = opts.dithKern;
@@ -1009,68 +1009,4 @@ module ColorQuantization {
 		}
 	}
 
-	class HueStats {
-		private numGroups;
-		private minCols;
-		private stats;
-		private groupsFull;
-
-		constructor(numGroups, minCols) {
-			this.numGroups = numGroups;
-			this.minCols = minCols;
-			this.stats = {};
-
-			for (var i = -1; i < numGroups; i++)
-				this.stats[ i ] = {num: 0, cols: []};
-
-			this.groupsFull = 0;
-		}
-
-		public check(i32) {
-			if (this.groupsFull == this.numGroups + 1)
-				this.check = function () {
-				};
-
-			var r = (i32 & 0xff),
-				g = (i32 >>> 8) & 0xff,
-				b = (i32 >>> 16) & 0xff,
-				a = (i32 >>> 24) & 0xff,
-				hg = (r == g && g == b) ? -1 : hueGroup(rgb2hsl(r, g, b).h, this.numGroups),
-				gr = this.stats[ hg ],
-				min = this.minCols;
-
-			gr.num++;
-
-			if (gr.num > min)
-				return;
-			if (gr.num == min)
-				this.groupsFull++;
-
-			if (gr.num <= min)
-				this.stats[ hg ].cols.push(i32);
-		}
-
-		public inject(histG) {
-			for (var i = -1; i < this.numGroups; i++) {
-				if (this.stats[ i ].num <= this.minCols) {
-					switch (typeOf(histG)) {
-						case "Array":
-							this.stats[ i ].cols.forEach(function (col) {
-								if (histG.indexOf(col) == -1)
-									histG.push(col);
-							});
-							break;
-						case "Object":
-							this.stats[ i ].cols.forEach(function (col) {
-								if (!histG[ col ])
-									histG[ col ] = 1;
-								else
-									histG[ col ]++;
-							});
-							break;
-					}
-				}
-			}
-		}
-	}
 }
