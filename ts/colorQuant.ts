@@ -6,6 +6,7 @@
 */
 
 /// <reference path='./point.ts' />
+/// <reference path='./pointBuffer.ts' />
 /// <reference path='./hueStatistics.ts' />
 /// <reference path='./dither.ts' />
 /// <reference path='./utils.ts' />
