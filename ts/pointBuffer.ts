@@ -20,12 +20,24 @@ module ColorQuantization {
 
 	 */
 
-	export class PointHolder {
+	export class PointBuffer {
 		private _pointArray : Point[];
 		private _width : number;
 		private _height : number;
 
 		constructor() {
+		}
+
+		public getWidth() : number {
+			return this._width;
+		}
+
+		public getHeight() : number {
+			return this._height;
+		}
+
+		public getPointArray() : Point[] {
+			return this._pointArray;
 		}
 
 		public importHTMLImageElement(img : HTMLImageElement) : void {
@@ -36,7 +48,7 @@ module ColorQuantization {
 			canvas.width = width;
 			canvas.height = height;
 
-			var ctx = canvas.getContext("2d");
+			var ctx = <CanvasRenderingContext2D>canvas.getContext("2d");
 			ctx.drawImage(img, 0, 0, width,height, 0, 0, width, height);
 
 			this.importHTMLCanvasElement(canvas);
@@ -46,7 +58,7 @@ module ColorQuantization {
 			var width = canvas.width,
 				height = canvas.height;
 
-			var ctx = canvas.getContext("2d"),
+			var ctx = <CanvasRenderingContext2D>canvas.getContext("2d"),
 				imgData = ctx.getImageData(0, 0, width, height);
 
 			this.importImageData(imgData);
@@ -72,7 +84,7 @@ module ColorQuantization {
 */
 		}
 
-		public importArray(data : Array, width : number, height : number) : void {
+		public importArray(data : number[], width : number, height : number) : void {
 			var uint8array = new Uint8Array(data);
 			this.importUint32Array(new Uint32Array(uint8array.buffer), width, height);
 		}
@@ -89,6 +101,17 @@ module ColorQuantization {
 			for(var i = 0, l = uint32array.length; i < l; i++) {
 				this._pointArray[i] = new Point(uint32array[i]);
 			}
+		}
+
+		public exportUint32Array() : Uint32Array {
+			var l = this._pointArray.length,
+				uint32Array = new Uint32Array(l);
+
+			for(var i = 0; i < l; i++) {
+				uint32Array[i] = this._pointArray[i].uint32;
+			}
+
+			return uint32Array;
 		}
 	}
 

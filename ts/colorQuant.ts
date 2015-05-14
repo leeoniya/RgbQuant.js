@@ -185,16 +185,15 @@ module ColorQuantization {
 
 			var ds = kernels[ kernel ];
 
-			var data = Utils.getImageData(img),
-//			buf8 = data.buf8,
-				buf32 = data.buf32,
-				width = data.width,
-				height = data.height,
-				len = buf32.length;
+			var pointBuffer = new PointBuffer();
+			pointBuffer.importHTMLImageElement(img);
 
-			var dir = serpentine ? -1 : 1;
+			var pointArray = pointBuffer.getPointArray(),
+				width = pointBuffer.getWidth(),
+				height = pointBuffer.getHeight(),
+				dir = serpentine ? -1 : 1;
 
-			(<any>console).profile("dither");
+			//(<any>console).profile("dither");
 			for (var y = 0; y < height; y++) {
 				if (serpentine)
 					dir = dir * -1;
@@ -204,29 +203,25 @@ module ColorQuantization {
 				for (var x = (dir == 1 ? 0 : width - 1), xend = (dir == 1 ? width : 0); x !== xend; x += dir) {
 					// Image pixel
 					var idx = lni + x,
-						i32 = buf32[ idx ],
-						r1 = (i32 & 0xff),
-						g1 = (i32 >>> 8) & 0xff,
-						b1 = (i32 >>> 16) & 0xff,
-						a1 = (i32 >>> 24) & 0xff;
+						p1 = pointArray[ idx ];
 
 					// Reduced pixel
-					var point = this.nearestColor(i32);
+					var point = this.nearestColor_Point(p1);
 
-					buf32[ idx ] = point.uint32;
+					pointArray[ idx ] = point;
 
 					// dithering strength
 					if (this._dithDelta) {
-						var dist = Utils.distEuclidean([ r1, g1, b1, a1 ], point.rgba);
+						var dist = Utils.distEuclidean(p1.rgba, point.rgba);
 						if (dist < this._dithDelta)
 							continue;
 					}
 
 					// Component distance
-					var er = r1 - point.r,
-						eg = g1 - point.g,
-						eb = b1 - point.b,
-						ea = a1 - point.a;
+					var er = p1.r - point.r,
+						eg = p1.g - point.g,
+						eb = p1.b - point.b,
+						ea = p1.a - point.a;
 
 					for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
 						var x1 = ds[ i ][ 1 ] * dir,
@@ -237,33 +232,22 @@ module ColorQuantization {
 						if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
 							var d = ds[ i ][ 0 ];
 							var idx2 = idx + (lni2 + x1),
-								i32y = buf32[ idx2 ];
+								p3 = pointArray[ idx2 ];
 
-							var r3 = (i32y & 0xff),
-								g3 = (i32y >>> 8) & 0xff,
-								b3 = (i32y >>> 16) & 0xff,
-								a3 = (i32y >>> 24) & 0xff;
+							var r4 = Math.max(0, Math.min(255, p3.r + er * d)),
+								g4 = Math.max(0, Math.min(255, p3.g + eg * d)),
+								b4 = Math.max(0, Math.min(255, p3.b + eb * d)),
+								a4 = Math.max(0, Math.min(255, p3.a + ea * d));
 
-							var r4 = Math.max(0, Math.min(255, r3 + er * d)),
-								g4 = Math.max(0, Math.min(255, g3 + eg * d)),
-								b4 = Math.max(0, Math.min(255, b3 + eb * d)),
-								a4 = Math.max(0, Math.min(255, a3 + ea * d));
-
-							buf32[ idx2 ] = (
-								(a4 << 24) |	// alpha
-								(b4 << 16) |	// blue
-								(g4 << 8) |	// green
-								r4				// red
-								) >>> 0;
-
-							//if(this.idxi32.indexOf(buf32[idx2]) < 0) throw new Error("no palette entry!");
+							pointArray[ idx2 ].set(r4, g4, b4, a4);
 						}
 					}
 				}
 			}
 
-			(<any>console).profileEnd("dither");
-			return buf32;
+			//(<any>console).profileEnd("dither");
+
+			return pointBuffer.exportUint32Array();
 		}
 
 		// reduces histogram to palette, remaps & memoizes reduced colors
@@ -576,6 +560,11 @@ module ColorQuantization {
 			return this._paletteArray[ idx ];
 		}
 
+		public nearestColor_Point(point : Point) : Point {
+			var idx = this.nearestIndex_Point(point);
+			return this._paletteArray[ idx ];
+		}
+
 		// TOTRY: use HUSL - http://boronine.com/husl/
 		public nearestIndex(i32) {
 /*
@@ -610,6 +599,36 @@ module ColorQuantization {
 			}
 
 			this._i32idx[i32] = idx;
+			return idx;
+		}
+
+		public nearestIndex_Point(point : Point) : number {
+			/*
+			 // alpha 0 returns null index
+			 if ((i32 & 0xff000000) >> 24 == 0)
+			 return null;
+			 */
+
+			if (this._useCache && ("" + point.uint32) in this._i32idx) {
+				return this._i32idx[point.uint32];
+			}
+
+			var min = 1000,
+				idx,
+				len = this._paletteArray.length;
+
+			for (var i = 0; i < len; i++) {
+				if (!this._paletteArray[ i ]) continue;		// sparse palettes
+
+				var dist = Utils.distEuclidean(point.rgba, this._paletteArray[ i ].rgba);
+
+				if (dist < min) {
+					min = dist;
+					idx = i;
+				}
+			}
+
+			this._i32idx[point.uint32] = idx;
 			return idx;
 		}
 
