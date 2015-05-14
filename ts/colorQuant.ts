@@ -71,9 +71,6 @@ module ColorQuantization {
 		// reverse lookup {i32:idx}
 		private _i32idx = {};
 
-		// {i32:rgb}
-		private _i32rgb = {};
-
 		// enable color caching (also incurs overhead of cache misses and cache building)
 		private _useCache = true;
 
@@ -113,7 +110,6 @@ module ColorQuantization {
 			if (this._paletteArray.length > 0) {
 				this._paletteArray.forEach(function (point : Point, i) {
 					this._i32idx[ point.uint32 ] = i;
-					this._i32rgb[ point.uint32 ] = point.rgba;
 				}, this);
 			}
 		}
@@ -411,18 +407,18 @@ module ColorQuantization {
 
 						// iterate palette
 						for (var i = 0; i < len; i++) {
-							var pxi = idxrgb[ i ], i32i = idxi32[ i ];
+							var pxi = idxrgb[ i ];
 							if (!pxi) continue;
 
 							for (var j = i + 1; j < len; j++) {
-								var pxj = idxrgb[ j ], i32j = idxi32[ j ];
+								var pxj = idxrgb[ j ];
 								if (!pxj) continue;
 
 								var dist = Utils.distEuclidean(pxi, pxj);
 
 								if (dist < thold) {
 									// store index,rgb,dist
-									memDist.push([ j, pxj, i32j, dist ]);
+									memDist.push([ j, pxj, dist ]);
 
 									// kill squashed value
 									delete(idxrgb[ j ]);
@@ -442,7 +438,7 @@ module ColorQuantization {
 					if (palLen < this._colors) {
 						// sort descending
 						Utils.sort.call(memDist, function (a, b) {
-							return b[ 3 ] - a[ 3 ];
+							return b[ 2 ] - a[ 2 ];
 						});
 
 						var k = 0;
@@ -464,7 +460,6 @@ module ColorQuantization {
 					this._paletteArray.push(point);
 
 					this._i32idx[ point.uint32 ] = this._paletteArray.length - 1;
-					this._i32rgb[ point.uint32 ] = idxrgb[ i ];
 				}
 			}
 		}
@@ -479,7 +474,7 @@ module ColorQuantization {
 				col = buf32[ i ];
 
 				// skip transparent
-				if ((col & 0xff000000) >> 24 == 0) continue;
+				//if ((col & 0xff000000) >> 24 == 0) continue;
 
 				// collect hue stats
 				if (this._hueStats)
@@ -510,7 +505,7 @@ module ColorQuantization {
 					col = buf32[ i ];
 
 					// skip transparent
-					if ((col & 0xff000000) >> 24 == 0) return;
+					//if ((col & 0xff000000) >> 24 == 0) return;
 
 					// collect hue stats
 					if (this._hueStats)
@@ -577,7 +572,6 @@ module ColorQuantization {
 		// TOTRY: use HUSL - http://boronine.com/husl/
 		public nearestColor(i32) : Point {
 			var idx = this.nearestIndex(i32);
-			if(idx === null) throw new Error("color i32  should be 0, but why null?");
 			return this._paletteArray[ idx ];
 		}
 
@@ -615,7 +609,6 @@ module ColorQuantization {
 			}
 
 			this._i32idx[i32] = idx;
-
 			return idx;
 		}
 

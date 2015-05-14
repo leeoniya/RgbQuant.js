@@ -187,14 +187,16 @@ module ColorQuantization.Utils {
 
 	// returns array of hash keys sorted by their values
 	export function sortedHashKeys(obj, desc) {
-		var keys = [];
-
-		for (var key in obj)
-			keys.push(key);
-
-		return sort.call(keys, function (a, b) {
-			return desc ? obj[ b ] - obj[ a ] : obj[ a ] - obj[ b ];
-		});
+		var keys = Object.keys(obj);
+		if(desc) {
+			return sort.call(keys, function (a, b) {
+				return obj[ b ] - obj[ a ];
+			});
+		} else {
+			return sort.call(keys, function (a, b) {
+				return obj[ a ] - obj[ b ];
+			});
+		}
 	}
 
 	var rd = 255,
