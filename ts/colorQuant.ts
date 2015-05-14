@@ -116,18 +116,16 @@ module ColorQuantization {
 		}
 
 		// gathers histogram info
-		public sample(img, width) {
+		public sample(pointBuffer : PointBuffer) {
 			if (this._palLocked)
 				throw "Cannot sample additional images, palette already assembled.";
 
-			var data = Utils.getImageData(img, width);
-
 			switch (this._method) {
 				case 1:
-					this.colorStats1D(data.buf32);
+					this.colorStats1D(pointBuffer);
 					break;
 				case 2:
-					this.colorStats2D(data.buf32, data.width);
+					this.colorStats2D(pointBuffer);
 					break;
 			}
 		}
@@ -450,13 +448,13 @@ module ColorQuantization {
 		}
 
 		// global top-population
-		public colorStats1D(buf32) {
+		public colorStats1D(pointBuffer : PointBuffer) {
 			var histG = this._histogram,
-				num = 0, col,
-				len = buf32.length;
+				pointArray = pointBuffer.getPointArray(),
+				len = pointArray.length;
 
 			for (var i = 0; i < len; i++) {
-				col = buf32[ i ];
+				var col = pointArray[i].uint32;
 
 				// skip transparent
 				//if ((col & 0xff000000) >> 24 == 0) continue;
@@ -475,11 +473,15 @@ module ColorQuantization {
 		// population threshold within subregions
 		// FIXME: this can over-reduce (few/no colors same?), need a way to keep
 		// important colors that dont ever reach local thresholds (gradients?)
-		public colorStats2D(buf32, width) {
+		public colorStats2D(pointBuffer : PointBuffer) {
+			var width = pointBuffer.getWidth(),
+				height = pointBuffer.getHeight(),
+				pointArray = pointBuffer.getPointArray();
+
 			var boxW = this._boxSize[ 0 ],
 				boxH = this._boxSize[ 1 ],
 				area = boxW * boxH,
-				boxes = Utils.makeBoxes(width, buf32.length / width, boxW, boxH),
+				boxes = Utils.makeBoxes(width, height, boxW, boxH),
 				histG = this._histogram;
 
 			boxes.forEach(function (box) {
@@ -487,7 +489,7 @@ module ColorQuantization {
 					histL = {}, col;
 
 				this.iterBox(box, width, function (i) {
-					col = buf32[ i ];
+					col = pointArray[i].uint32;
 
 					// skip transparent
 					//if ((col & 0xff000000) >> 24 == 0) return;

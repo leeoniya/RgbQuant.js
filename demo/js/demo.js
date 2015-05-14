@@ -99,7 +99,9 @@ function process(srcs) {
 			var img = this, id = baseName(img.src)[0];
 
 			ti.mark("sample '" + id + "'", function(){
-				quant.sample(img);
+				var pointBuffer = new ColorQuantization.PointBuffer();
+				pointBuffer.importHTMLImageElement(img);
+				quant.sample(pointBuffer);
 			});
 		});
 
