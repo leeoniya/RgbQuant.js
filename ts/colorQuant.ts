@@ -18,7 +18,7 @@ module ColorQuantization {
 	}
 	export class RgbQuant {
 		// 1 = by global population, 2 = subregion population threshold
-		private _method : number = 2;
+		private _method : number = 1;
 
 		// desired final palette size
 		private _colors : number = 256;
@@ -148,8 +148,7 @@ module ColorQuantization {
 			}
 
 			var pointArray = pointBuffer.getPointArray(),
-				len : number = pointArray.length,
-				out32 = new Uint32Array(len);
+				len : number = pointArray.length;
 
 			for (var i = 0; i < len; i++) {
 				pointArray[ i ].from(this.nearestColor(pointArray[ i ]));
@@ -248,23 +247,22 @@ module ColorQuantization {
 		public buildPal(noSort?) {
 			if (this._palLocked || this._paletteArray.length > 0 && this._paletteArray.length <= this._colors) return;
 
-			var histG = this._histogram,
-				sorted = Utils.sortedHashKeys(histG, true);
+			var sorted = Utils.sortedHashKeys(this._histogram, true);
 
 			if (sorted.length == 0)
 				throw "Nothing has been sampled, palette cannot be built.";
 
 			switch (this._method) {
 				case 1:
-					var cols = this._initColors,
-						last = sorted[ cols - 1 ],
-						freq = histG[ last ];
+					var initialColorsLimit = Math.min(sorted.length, this._initColors ),
+						last = sorted[ initialColorsLimit - 1 ],
+						freq = this._histogram[ last ];
 
-					var idxi32 = sorted.slice(0, cols);
+					var idxi32 = sorted.slice(0, initialColorsLimit);
 
 					// add any cut off colors with same freq as last
-					var pos = cols, len = sorted.length;
-					while (pos < len && histG[ sorted[ pos ] ] == freq)
+					var pos = initialColorsLimit, len = sorted.length;
+					while (pos < len && this._histogram[ sorted[ pos ] ] == freq)
 						idxi32.push(sorted[ pos++ ]);
 
 					// inject min huegroup colors
@@ -301,25 +299,19 @@ module ColorQuantization {
 			return tuples ? this._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
 		}
 
-		public prunePal(keep) {
-			var /*i32,*/
-				point : Point;
+		// TODO: check usage, not tested!
+		public prunePal(keep : number[]) {
+			var point : Point;
 
 			for (var j = 0; j < this._paletteArray.length; j++) {
-				if (!keep[ j ]) {
-					point = this._paletteArray[ j ];
+				if (keep.indexOf(j) < 0) {
 					this._paletteArray[j] = null;
-
-					// TODO: check if we need to delete also this._i32rgb ????
-					delete this._i32idx[ point.uint32 ];// TODO: delete is forbidden operator!!!
 				}
 			}
 
 			// compact
 			if (this._reIndex) {
-				var idxrgb = [],
-					idxi32 = [],
-					i32idx = {},
+				var i32idx = {},
 					compactedPaletteArray : Point[] = [];
 
 				for (var j = 0, i = 0; j < this._paletteArray.length; j++) {
@@ -341,20 +333,22 @@ module ColorQuantization {
 			// if pre-defined palette's length exceeds target
 			if (this._paletteArray.length > this._colors) {
 				// quantize histogram to existing palette
-				var len = idxi32.length, keep = {}, uniques = 0, idx, pruned = false;
 
-				for (var i = 0; i < len; i++) {
+				// TODO: not tested code
+				var keep = [], uniqueColors = 0, idx, pruned = false;
+
+				for (var i = 0, len = idxi32.length; i < len; i++) {
 					// palette length reached, unset all remaining colors (sparse palette)
-					if (uniques == this._colors && !pruned) {
+					if (uniqueColors >= this._colors) {
 						this.prunePal(keep);
 						pruned = true;
-					}
-
-					idx = this.nearestIndex(idxi32[ i ]);
-
-					if (uniques < this._colors && !keep[ idx ]) {
-						keep[ idx ] = true;
-						uniques++;
+						break;
+					} else {
+						idx = this.nearestIndex(idxi32[i]);
+						if (keep.indexOf(idx) < 0) {
+							keep.push(idx);
+							uniqueColors++;
+						}
 					}
 				}
 
@@ -401,6 +395,7 @@ module ColorQuantization {
 
 									// kill squashed value
 									delete(idxrgb[ j ]);
+									//idxrgb[ j ] = null;
 									palLen--;
 								}
 							}
@@ -431,13 +426,11 @@ module ColorQuantization {
 					}
 				}
 
-				var len = idxrgb.length;
-				for (var i = 0; i < len; i++) {
+				for (var i = 0, len = idxrgb.length; i < len; i++) {
 					if (!idxrgb[ i ]) continue;
 
 					var point : Point = new Point(idxrgb[i]);
 					this._paletteArray.push(point);
-
 					this._i32idx[ point.uint32 ] = this._paletteArray.length - 1;
 				}
 			}
