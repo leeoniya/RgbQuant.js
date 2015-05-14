@@ -113,6 +113,11 @@ module ColorQuantization {
 
 			return uint32Array;
 		}
+
+		public exportUint8Array() : Uint8Array {
+			return new Uint8Array(this.exportUint32Array().buffer);
+		}
+
 	}
 
 }

@@ -12,6 +12,15 @@ module ColorQuantization {
 			this.set(...args);
 		}
 
+		public from(point : Point) {
+			this.r = point.r;
+			this.g = point.g;
+			this.b = point.b;
+			this.a = point.a;
+			this.uint32 = point.uint32;
+			this.rgba = point.rgba.slice(0);
+		}
+
 		public set(...args : number[]) {
 			switch(args.length) {
 				case 1:

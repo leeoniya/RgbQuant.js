@@ -133,7 +133,7 @@ module ColorQuantization {
 		// image quantizer
 		// todo: memoize colors here also
 		// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
-		public reduce(img, retType, dithKern, dithSerp) : any {
+		public reduce(pointBuffer : PointBuffer, retType, dithKern, dithSerp) : any {
 			if (!this._palLocked)
 				this.buildPal();
 
@@ -143,22 +143,21 @@ module ColorQuantization {
 			retType = retType || 1;
 
 			// reduce w/dither
-			var buf32;
-			if (dithKern)
-				buf32 = this.dither(img, dithKern, dithSerp);
-			else {
-				var data = Utils.getImageData(img);
-				buf32 = data.buf32;
+			if (dithKern) {
+				pointBuffer = this.dither(pointBuffer, dithKern, dithSerp);
 			}
 
-			var len : number = buf32.length,
+			var pointArray = pointBuffer.getPointArray(),
+				len : number = pointArray.length,
 				out32 = new Uint32Array(len);
 
 			for (var i = 0; i < len; i++) {
-				var i32 : number = buf32[ i ];
-				out32[ i ] = this.nearestColor(i32).uint32;
+				pointArray[ i ].from(this.nearestColor(pointArray[ i ]));
 			}
 
+			return pointBuffer;
+
+/*
 			if (retType == 1)
 				return new Uint8Array(out32.buffer);
 
@@ -173,18 +172,16 @@ module ColorQuantization {
 
 				return out;
 			}
+*/
 		}
 
 		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
-		public dither(img, kernel, serpentine) {
+		public dither(pointBuffer : PointBuffer, kernel, serpentine) : PointBuffer {
 			if (!kernel || !kernels[ kernel ]) {
 				throw 'Unknown dithering kernel: ' + kernel;
 			}
 
 			var ds = kernels[ kernel ];
-
-			var pointBuffer = new PointBuffer();
-			pointBuffer.importHTMLImageElement(img);
 
 			var pointArray = pointBuffer.getPointArray(),
 				width = pointBuffer.getWidth(),
@@ -204,7 +201,7 @@ module ColorQuantization {
 						p1 = pointArray[ idx ];
 
 					// Reduced pixel
-					var point = this.nearestColor_Point(p1);
+					var point = this.nearestColor(p1);
 
 					pointArray[ idx ] = point;
 
@@ -244,8 +241,7 @@ module ColorQuantization {
 			}
 
 			//(<any>console).profileEnd("dither");
-
-			return pointBuffer.exportUint32Array();
+			return pointBuffer;
 		}
 
 		// reduces histogram to palette, remaps & memoizes reduced colors
@@ -557,12 +553,7 @@ module ColorQuantization {
 		}
 
 		// TOTRY: use HUSL - http://boronine.com/husl/
-		public nearestColor(i32) : Point {
-			var idx = this.nearestIndex(i32);
-			return this._paletteArray[ idx ];
-		}
-
-		public nearestColor_Point(point : Point) : Point {
+		public nearestColor(point : Point) : Point {
 			var idx = this.nearestIndex_Point(point);
 			return this._paletteArray[ idx ];
 		}

@@ -80,7 +80,8 @@ function process(srcs) {
 	ti.start();
 
 	$.getImgs(srcs, function() {
-		var imgs = arguments;
+		var imgs = [];
+		for(var i = 0, l = arguments.length; i < l; i++) imgs[i] = arguments[i];
 
 		ti.mark("image(s) loaded");
 
@@ -93,15 +94,22 @@ function process(srcs) {
 		});
 
 		var opts = (srcs.length == 1) ? getOpts(baseName(srcs[0])[0]) : dflt_opts,
-			quant = new ColorQuantization.RgbQuant(opts);
+			quant = new ColorQuantization.RgbQuant(opts),
+			pointBuffers = [];
 
-		$.each(imgs, function() {
-			var img = this, id = baseName(img.src)[0];
+
+		ti.mark("create pointBuffers", function() {
+			imgs.forEach(function (img, index) {
+				pointBuffers[index] = new ColorQuantization.PointBuffer();
+				pointBuffers[index].importHTMLImageElement(img);
+			});
+		});
+
+		imgs.forEach(function (img, index) {
+			var id = baseName(img.src)[0];
 
 			ti.mark("sample '" + id + "'", function(){
-				var pointBuffer = new ColorQuantization.PointBuffer();
-				pointBuffer.importHTMLImageElement(img);
-				quant.sample(pointBuffer);
+				quant.sample(pointBuffers[index]);
 			});
 		});
 
@@ -115,12 +123,12 @@ function process(srcs) {
 		$palt.empty().append(pcan);
 
 		$redu.empty();
-		$(imgs).each(function() {
-			var img = this, id = baseName(img.src)[0];
+		imgs.forEach(function (img, index) {
+			var id = baseName(img.src)[0];
 
 			var img8;
 			ti.mark("reduce '" + id + "'", function() {
-				img8 = quant.reduce(img);
+				img8 = quant.reduce(pointBuffers[index]).exportUint8Array();
 			});
 
 			ti.mark("reduced -> DOM", function() {
