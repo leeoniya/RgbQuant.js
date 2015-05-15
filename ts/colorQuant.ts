@@ -144,9 +144,12 @@ module ColorQuantization {
 
 			// reduce w/dither
 			var start = Date.now();
+
+			console.profile("__!dither");
 			if (dithKern) {
 				pointBuffer = this.dither(pointBuffer, dithKern, dithSerp);
 			}
+			(<any>console).profileEnd("__!dither");
 			console.log("[dither]: " + (Date.now() - start));
 
 			var pointArray = pointBuffer.getPointArray(),
@@ -532,8 +535,7 @@ module ColorQuantization {
 
 		// TOTRY: use HUSL - http://boronine.com/husl/
 		public nearestColor(point : Point) : Point {
-			var idx = this.nearestIndex_Point(point);
-			return this._paletteArray[ idx ];
+			return this._paletteArray[ this.nearestIndex_Point(point) | 0 ];
 		}
 
 		// TOTRY: use HUSL - http://boronine.com/husl/
@@ -573,6 +575,10 @@ module ColorQuantization {
 			return idx;
 		}
 
+		private _nearestPointFromCache(key) {
+			return typeof this._i32idx[key] === "number" ? this._i32idx[key] : -1;
+		}
+
 		public nearestIndex_Point(point : Point) : number {
 			/*
 			 // alpha 0 returns null index
@@ -580,21 +586,31 @@ module ColorQuantization {
 			 return null;
 			 */
 
-			if (this._useCache && ("" + point.uint32) in this._i32idx) {
-				return this._i32idx[point.uint32];
+			if(this._useCache) {
+				var idx2 = this._nearestPointFromCache("" + point.uint32);
+				if(idx2 >= 0) return idx2;
 			}
+/*
+			if (this._useCache && typeof this._i32idx["" + point.uint32] === "number") {
+				return this._i32idx[ "" + point.uint32];
+			}
+*/
+/*
+			if (this._useCache && ("" + point.uint32) in this._i32idx) {
+				return this._i32idx[ "" + point.uint32];
+			}
+*/
 
-			var min = 1000,
-				idx,
-				len = this._paletteArray.length;
+			var minimalDistance = 1000,
+				idx = 0;
 
-			for (var i = 0; i < len; i++) {
+			for (var i = 0, l = this._paletteArray.length; i < l; i++) {
 				if (!this._paletteArray[ i ]) continue;		// sparse palettes
 
-				var dist = Utils.distEuclidean(point.rgba, this._paletteArray[ i ].rgba);
+				var distance = Utils.distEuclidean(point.rgba, this._paletteArray[ i ].rgba);
 
-				if (dist < min) {
-					min = dist;
+				if (distance < minimalDistance) {
+					minimalDistance = distance;
 					idx = i;
 				}
 			}
