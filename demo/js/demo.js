@@ -115,7 +115,11 @@ function process(srcs) {
 			pal8 = quant.palette();
 		});
 
-		var pcan = drawPixels(pal8, 16, 128);
+		// TODO: temporary solution. see Palette class todo
+		var uint32Array = pal8._paletteArray.map(function(point) { return point.uint32 });
+		var uint8array = new Uint8Array((new Uint32Array(uint32Array)).buffer);
+
+		var pcan = drawPixels(uint8array, 16, 128);
 
 		$palt.empty().append(pcan);
 
@@ -125,7 +129,7 @@ function process(srcs) {
 
 			var img8;
 			ti.mark("reduce '" + id + "'", function() {
-				img8 = quant.reduce(pointBuffers[index]).exportUint8Array();
+				img8 = quant.reduce(pointBuffers[index], pal8).exportUint8Array();
 			});
 
 			ti.mark("reduced -> DOM", function() {

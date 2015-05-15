@@ -6,6 +6,7 @@
 */
 
 /// <reference path='./point.ts' />
+/// <reference path='./palette.ts' />
 /// <reference path='./pointBuffer.ts' />
 /// <reference path='./hueStatistics.ts' />
 /// <reference path='./dither.ts' />
@@ -67,19 +68,14 @@ module ColorQuantization {
 		// accumulated histogram
 		private _histogram = {};
 
-		private _paletteArray : Point[] = [];
-
-		// reverse lookup {i32:idx}
-		private _i32idx = {};
+		//private _paletteArray : Point[] = [];
+		private _palette : Palette;
 
 		// enable color caching (also incurs overhead of cache misses and cache building)
 		private _useCache = true;
 
 		// min color occurance count needed to qualify for caching
 		private _cacheFreq = 10;
-
-		// allows pre-defined palettes to be re-indexed (enabling palette compacting and sorting)
-		private _reIndex = true;
 
 		// TODO: make interface for options
 		constructor(opts : any) {
@@ -104,22 +100,10 @@ module ColorQuantization {
 
 			// accumulated histogram
 			this._histogram = {};
-			// palette - rgb triplets
-			if (Object.prototype.toString.call(opts.palette) === "[object Array]") this._paletteArray = opts.palette.map(quadruplet => new Point(<any>quadruplet));
-
-			// if pre-defined palette, build lookups
-			if (this._paletteArray.length > 0) {
-				this._paletteArray.forEach(function (point : Point, i) {
-					this._i32idx[ point.uint32 ] = i;
-				}, this);
-			}
 		}
 
 		// gathers histogram info
 		public sample(pointBuffer : PointBuffer) {
-			if (this._palLocked)
-				throw "Cannot sample additional images, palette already assembled.";
-
 			switch (this._method) {
 				case 1:
 					this.colorStats1D(pointBuffer);
@@ -133,21 +117,18 @@ module ColorQuantization {
 		// image quantizer
 		// todo: memoize colors here also
 		// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
-		public reduce(pointBuffer : PointBuffer, retType?, dithKern?, dithSerp?) : any {
-			if (!this._palLocked)
-				this.buildPal();
+		public reduce(pointBuffer : PointBuffer, palette : Palette, dithKern?, dithSerp?) : any {
+			this._reducePalette(palette, this._colors);
 
 			dithKern = dithKern || this._dithKern;
 			dithSerp = typeof dithSerp != "undefined" ? dithSerp : this._dithSerp;
-
-			retType = retType || 1;
 
 			// reduce w/dither
 			var start = Date.now();
 
 			console.profile("__!dither");
 			if (dithKern) {
-				pointBuffer = this.dither(pointBuffer, dithKern, dithSerp);
+				pointBuffer = this.dither(pointBuffer, palette, dithKern, dithSerp);
 			}
 			(<any>console).profileEnd("__!dither");
 			console.log("[dither]: " + (Date.now() - start));
@@ -156,14 +137,14 @@ module ColorQuantization {
 				len : number = pointArray.length;
 
 			for (var i = 0; i < len; i++) {
-				pointArray[ i ].from(this.nearestColor(pointArray[ i ]));
+				pointArray[ i ].from(palette.nearestColor(pointArray[ i ]));
 			}
 
 			return pointBuffer;
 		}
 
 		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
-		public dither(pointBuffer : PointBuffer, kernel, serpentine) : PointBuffer {
+		public dither(pointBuffer : PointBuffer, palette : Palette, kernel, serpentine) : PointBuffer {
 			if (!kernel || !kernels[ kernel ]) {
 				throw 'Unknown dithering kernel: ' + kernel;
 			}
@@ -188,7 +169,7 @@ module ColorQuantization {
 						p1 = pointArray[ idx ];
 
 					// Reduced pixel
-					var point = this.nearestColor(p1);
+					var point = palette.nearestColor(p1);
 
 					pointArray[ idx ] = point;
 
@@ -231,10 +212,7 @@ module ColorQuantization {
 			return pointBuffer;
 		}
 
-		// reduces histogram to palette, remaps & memoizes reduced colors
-		public buildPal(noSort?) {
-			if (this._palLocked || this._paletteArray.length > 0 && this._paletteArray.length <= this._colors) return;
-
+		public getImportanceSortedColorsIDXI32() {
 			var sorted = Utils.sortedHashKeys(this._histogram, true);
 
 			if (sorted.length == 0)
@@ -268,71 +246,38 @@ module ColorQuantization {
 				return +v;
 			});
 
-			this.reducePal(idxi32);
-
-			if (!noSort && this._reIndex)
-				this.sortPal();
-
-			// build cache of top histogram colors
-			if (this._useCache)
-				this.cacheHistogram(idxi32);
-
-			this._palLocked = true;
+			return idxi32;
 		}
 
-		public palette(tuples?, noSort?) : any {
-			this.buildPal(noSort);
+		// reduces histogram to palette, remaps & memoizes reduced colors
+		public palette() : Palette {
+			var idxi32 = this.getImportanceSortedColorsIDXI32(),
+				palette : Palette = this._buildPalette(idxi32);
 
-			var uint32Array = this._paletteArray.map(point => point.uint32);
-			return tuples ? this._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
+			palette.sort(this._hueGroups);
+			return palette;
+/*
+			var uint32Array = this._palette._paletteArray.map(point => point.uint32);
+			return tuples ? this._palette._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
+*/
 		}
 
-		// TODO: check usage, not tested!
-		public prunePal(keep : number[]) {
-			var point : Point;
+		// TODO: not tested method
+		private _reducePalette(palette : Palette, colors : number) {
+			if (palette._paletteArray.length > colors) {
+				var idxi32 = this.getImportanceSortedColorsIDXI32();
 
-			for (var j = 0; j < this._paletteArray.length; j++) {
-				if (keep.indexOf(j) < 0) {
-					this._paletteArray[j] = null;
-				}
-			}
-
-			// compact
-			if (this._reIndex) {
-				var i32idx = {},
-					compactedPaletteArray : Point[] = [];
-
-				for (var j = 0, i = 0; j < this._paletteArray.length; j++) {
-					if (this._paletteArray[ j ]) {
-						point = this._paletteArray[j];
-						compactedPaletteArray[i] = point;
-						i32idx[ point.uint32 ] = i;
-						i++;
-					}
-				}
-
-				this._paletteArray = compactedPaletteArray;
-				this._i32idx = i32idx;
-			}
-		}
-
-		// reduces similar colors from an importance-sorted Uint32 rgba array
-		public reducePal(idxi32) {
-			// if pre-defined palette's length exceeds target
-			if (this._paletteArray.length > this._colors) {
 				// quantize histogram to existing palette
-
-				// TODO: not tested code
 				var keep = [], uniqueColors = 0, idx, pruned = false;
 
 				for (var i = 0, len = idxi32.length; i < len; i++) {
 					// palette length reached, unset all remaining colors (sparse palette)
-					if (uniqueColors >= this._colors) {
-						this.prunePal(keep);
+					if (uniqueColors >= colors) {
+						palette.prunePal(keep);
 						pruned = true;
 						break;
 					} else {
-						idx = this.nearestIndex(idxi32[i]);
+						idx = palette.nearestIndex(idxi32[i]);
 						if (keep.indexOf(idx) < 0) {
 							keep.push(idx);
 							uniqueColors++;
@@ -341,87 +286,90 @@ module ColorQuantization {
 				}
 
 				if (!pruned) {
-					this.prunePal(keep);
+					palette.prunePal(keep);
 					pruned = true;
 				}
 			}
+		}
+
+		// reduces similar colors from an importance-sorted Uint32 rgba array
+		private _buildPalette(idxi32) {
+			var palette : Palette = new Palette();
+
 			// reduce histogram to create initial palette
-			else {
-				// build full rgb palette
-				var idxrgb = idxi32.map(function (i32) {
-					return [
-						(i32 & 0xff),
-						(i32 >>> 8) & 0xff,
-						(i32 >>> 16) & 0xff,
-						(i32 >>> 24) & 0xff
-					];
-				});
+			// build full rgb palette
+			var idxrgb = idxi32.map(function (i32) {
+				return [
+					(i32 & 0xff),
+					(i32 >>> 8) & 0xff,
+					(i32 >>> 16) & 0xff,
+					(i32 >>> 24) & 0xff
+				];
+			});
 
-				var len = idxrgb.length,
-					palLen = len,
-					thold = this._initDist;
+			var len    = idxrgb.length,
+				palLen = len,
+				thold  = this._initDist;
 
-				// palette already at or below desired length
-				if (palLen > this._colors) {
-					while (palLen > this._colors) {
-						var memDist = [];
+			// palette already at or below desired length
+			if (palLen > this._colors) {
+				while (palLen > this._colors) {
+					var memDist = [];
 
-						// iterate palette
-						for (var i = 0; i < len; i++) {
-							var pxi = idxrgb[ i ];
-							if (!pxi) continue;
+					// iterate palette
+					for (var i = 0; i < len; i++) {
+						var pxi = idxrgb[i];
+						if (!pxi) continue;
 
-							for (var j = i + 1; j < len; j++) {
-								var pxj = idxrgb[ j ];
-								if (!pxj) continue;
+						for (var j = i + 1; j < len; j++) {
+							var pxj = idxrgb[j];
+							if (!pxj) continue;
 
-								var dist = Utils.distEuclidean(pxi, pxj);
+							var dist = Utils.distEuclidean(pxi, pxj);
 
-								if (dist < thold) {
-									// store index,rgb,dist
-									memDist.push([ j, pxj, dist ]);
+							if (dist < thold) {
+								// store index,rgb,dist
+								memDist.push([j, pxj, dist]);
 
-									// kill squashed value
-									//delete(idxrgb[ j ]);
-									idxrgb[ j ] = null;
-									palLen--;
-								}
+								idxrgb[j] = null;
+								palLen--;
 							}
 						}
-
-						// palette reduction pass
-						// console.log("palette length: " + palLen);
-
-						// if palette is still much larger than target, increment by larger initDist
-						thold += (palLen > this._colors * 3) ? this._initDist : this._distIncr;
 					}
 
-					// if palette is over-reduced, re-add removed colors with largest distances from last round
-					if (palLen < this._colors) {
-						// sort descending
-						Utils.sort.call(memDist, function (a, b) {
-							return b[ 2 ] - a[ 2 ];
-						});
+					// palette reduction pass
+					// console.log("palette length: " + palLen);
 
-						var k = 0;
-						while (palLen < this._colors) {
-							// re-inject rgb into final palette
-							idxrgb[ memDist[ k ][ 0 ] ] = memDist[ k ][ 1 ];
-
-							palLen++;
-							k++;
-						}
-					}
+					// if palette is still much larger than target, increment by larger initDist
+					thold += (palLen > this._colors * 3) ? this._initDist : this._distIncr;
 				}
 
-				for (var i = 0, len = idxrgb.length; i < len; i++) {
-					if (!idxrgb[ i ]) continue;
+				// if palette is over-reduced, re-add removed colors with largest distances from last round
+				if (palLen < this._colors) {
+					// sort descending
+					Utils.sort.call(memDist, function (a, b) {
+						return b[2] - a[2];
+					});
 
-					var point : Point = new Point(idxrgb[i]);
-					this._paletteArray.push(point);
-					this._i32idx[ point.uint32 ] = this._paletteArray.length - 1;
+					var k = 0;
+					while (palLen < this._colors) {
+						// re-inject rgb into final palette
+						idxrgb[memDist[k][0]] = memDist[k][1];
+
+						palLen++;
+						k++;
+					}
 				}
 			}
+
+			for (var i = 0, len = idxrgb.length; i < len; i++) {
+				if (!idxrgb[i]) continue;
+
+				var point : Point = new Point(idxrgb[i]);
+				palette._paletteArray.push(point);
+			}
+
+			return palette;
 		}
 
 		// global top-population
@@ -490,36 +438,6 @@ module ColorQuantization {
 				this._hueStats.inject(histG);
 		}
 
-		// TODO: group very low lum and very high lum colors
-		// TODO: pass custom sort order
-		public sortPal() {
-			this._paletteArray.sort((a : Point, b : Point) => {
-				var rgbA = a.rgba,
-					rgbB = b.rgba;
-
-				var hslA = Utils.rgb2hsl(rgbA[ 0 ], rgbA[ 1 ], rgbA[ 2 ]),
-					hslB = Utils.rgb2hsl(rgbB[ 0 ], rgbB[ 1 ], rgbB[ 2 ]);
-
-				// sort all grays + whites together
-				var hueA = (rgbA[ 0 ] == rgbA[ 1 ] && rgbA[ 1 ] == rgbA[ 2 ]) ? -1 : Utils.hueGroup(hslA.h, this._hueGroups);
-				var hueB = (rgbB[ 0 ] == rgbB[ 1 ] && rgbB[ 1 ] == rgbB[ 2 ]) ? -1 : Utils.hueGroup(hslB.h, this._hueGroups);
-
-				var hueDiff = hueB - hueA;
-				if (hueDiff) return -hueDiff;
-
-				var lumDiff = Utils.lumGroup(+hslB.l.toFixed(2)) - Utils.lumGroup(+hslA.l.toFixed(2));
-				if (lumDiff) return -lumDiff;
-
-				var satDiff = Utils.satGroup(+hslB.s.toFixed(2)) - Utils.satGroup(+hslA.s.toFixed(2));
-				if (satDiff) return -satDiff;
-			});
-
-			// sync idxrgb & i32idx
-			this._paletteArray.forEach(function (point : Point, i) {
-				this._i32idx[ point.uint32 ] = i;
-			}, this);
-		}
-
 		// iterates @bbox within a parent rect of width @wid; calls @fn, passing index within parent
 		public iterBox(bbox, wid, fn) {
 			var b = bbox,
@@ -533,95 +451,13 @@ module ColorQuantization {
 			} while (i <= i1);
 		}
 
-		// TOTRY: use HUSL - http://boronine.com/husl/
-		public nearestColor(point : Point) : Point {
-			return this._paletteArray[ this.nearestIndex_Point(point) | 0 ];
-		}
 
-		// TOTRY: use HUSL - http://boronine.com/husl/
-		public nearestIndex(i32) {
-/*
-			// alpha 0 returns null index
-			if ((i32 & 0xff000000) >> 24 == 0)
-				return null;
-*/
-
-			if (this._useCache && ("" + i32) in this._i32idx) {
-				return this._i32idx[i32];
-			}
-
-			var min = 1000,
-				idx,
-				rgb = [
-					(i32 & 0xff),
-					(i32 >>> 8) & 0xff,
-					(i32 >>> 16) & 0xff,
-					(i32 >>> 24) & 0xff
-				],
-				len = this._paletteArray.length;
-
-			for (var i = 0; i < len; i++) {
-				if (!this._paletteArray[ i ]) continue;		// sparse palettes
-
-				var dist = Utils.distEuclidean(rgb, this._paletteArray[ i ].rgba);
-
-				if (dist < min) {
-					min = dist;
-					idx = i;
-				}
-			}
-
-			this._i32idx[i32] = idx;
-			return idx;
-		}
-
-		private _nearestPointFromCache(key) {
-			return typeof this._i32idx[key] === "number" ? this._i32idx[key] : -1;
-		}
-
-		public nearestIndex_Point(point : Point) : number {
-			/*
-			 // alpha 0 returns null index
-			 if ((i32 & 0xff000000) >> 24 == 0)
-			 return null;
-			 */
-
-			if(this._useCache) {
-				var idx2 = this._nearestPointFromCache("" + point.uint32);
-				if(idx2 >= 0) return idx2;
-			}
-/*
-			if (this._useCache && typeof this._i32idx["" + point.uint32] === "number") {
-				return this._i32idx[ "" + point.uint32];
-			}
-*/
-/*
-			if (this._useCache && ("" + point.uint32) in this._i32idx) {
-				return this._i32idx[ "" + point.uint32];
-			}
-*/
-
-			var minimalDistance = 1000,
-				idx = 0;
-
-			for (var i = 0, l = this._paletteArray.length; i < l; i++) {
-				if (!this._paletteArray[ i ]) continue;		// sparse palettes
-
-				var distance = Utils.distEuclidean(point.rgba, this._paletteArray[ i ].rgba);
-
-				if (distance < minimalDistance) {
-					minimalDistance = distance;
-					idx = i;
-				}
-			}
-
-			this._i32idx[point.uint32] = idx;
-			return idx;
-		}
-
+		// TODO: do we need this caching? we will build cache during first usage of each color. disabled for now
 		public cacheHistogram(idxi32) {
+/*
 			for (var i = 0, i32 = idxi32[ i ]; i < idxi32.length && this._histogram[ i32 ] >= this._cacheFreq; i32 = idxi32[ i++ ])
 				this._i32idx[ i32 ] = this.nearestIndex(i32);
+*/
 		}
 	}
 
