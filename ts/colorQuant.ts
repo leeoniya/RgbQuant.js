@@ -133,7 +133,7 @@ module ColorQuantization {
 		// image quantizer
 		// todo: memoize colors here also
 		// @retType: 1 - Uint8Array (default), 2 - Indexed array, 3 - Match @img type (unimplemented, todo)
-		public reduce(pointBuffer : PointBuffer, retType, dithKern, dithSerp) : any {
+		public reduce(pointBuffer : PointBuffer, retType?, dithKern?, dithSerp?) : any {
 			if (!this._palLocked)
 				this.buildPal();
 
@@ -143,9 +143,11 @@ module ColorQuantization {
 			retType = retType || 1;
 
 			// reduce w/dither
+			var start = Date.now();
 			if (dithKern) {
 				pointBuffer = this.dither(pointBuffer, dithKern, dithSerp);
 			}
+			console.log("[dither]: " + (Date.now() - start));
 
 			var pointArray = pointBuffer.getPointArray(),
 				len : number = pointArray.length;
@@ -155,23 +157,6 @@ module ColorQuantization {
 			}
 
 			return pointBuffer;
-
-/*
-			if (retType == 1)
-				return new Uint8Array(out32.buffer);
-
-			if (retType == 2) {
-				var out = [],
-					len : number = out32.length;
-
-				for (var i = 0; i < len; i++) {
-					var i32 : number = out32[ i ];
-					out[ i ] = this._i32idx[ i32 ];
-				}
-
-				return out;
-			}
-*/
 		}
 
 		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
@@ -226,14 +211,14 @@ module ColorQuantization {
 						if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
 							var d = ds[ i ][ 0 ];
 							var idx2 = idx + (lni2 + x1),
-								p3 = pointArray[ idx2 ];
+								p3 = pointArray[idx2];
 
 							var r4 = Math.max(0, Math.min(255, p3.r + er * d)),
 								g4 = Math.max(0, Math.min(255, p3.g + eg * d)),
 								b4 = Math.max(0, Math.min(255, p3.b + eb * d)),
 								a4 = Math.max(0, Math.min(255, p3.a + ea * d));
 
-							pointArray[ idx2 ].set(r4, g4, b4, a4);
+							pointArray[idx2].set(r4, g4, b4, a4);
 						}
 					}
 				}
@@ -292,7 +277,7 @@ module ColorQuantization {
 			this._palLocked = true;
 		}
 
-		public palette(tuples, noSort) : any {
+		public palette(tuples?, noSort?) : any {
 			this.buildPal(noSort);
 
 			var uint32Array = this._paletteArray.map(point => point.uint32);
@@ -394,8 +379,8 @@ module ColorQuantization {
 									memDist.push([ j, pxj, dist ]);
 
 									// kill squashed value
-									delete(idxrgb[ j ]);
-									//idxrgb[ j ] = null;
+									//delete(idxrgb[ j ]);
+									idxrgb[ j ] = null;
 									palLen--;
 								}
 							}

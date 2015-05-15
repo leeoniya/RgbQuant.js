@@ -1,12 +1,9 @@
 var cfg_edited = false;
 
 var dflt_opts = {
-	colors: 256,
+	colors: 1024,
 	method: 2,
-	initColors: 4096,
-	minHueCols: 0,
-	dithKern: null,
-	dithSerp: false,
+	dithKern: "SierraLite"
 };
 
 var cfgs = {

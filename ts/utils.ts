@@ -118,58 +118,6 @@ module ColorQuantization.Utils {
 		}
 	}
 
-	// returns uniform pixel data from various img
-	// TODO?: if array is passed, createimagedata, createlement canvas? take a pxlen?
-	export function getImageData(img, width?) {
-		var can, ctx, imgd, buf8, buf32, height;
-
-		switch (typeOf(img)) {
-			case "HTMLImageElement":
-				can = document.createElement("canvas");
-				can.width = img.naturalWidth;
-				can.height = img.naturalHeight;
-				ctx = can.getContext("2d");
-				ctx.drawImage(img, 0, 0);
-			case "Canvas":
-			case "HTMLCanvasElement":
-				can = can || img;
-				ctx = ctx || can.getContext("2d");
-			case "CanvasRenderingContext2D":
-				ctx = ctx || img;
-				can = can || ctx.canvas;
-				imgd = ctx.getImageData(0, 0, can.width, can.height);
-			case "ImageData":
-				imgd = imgd || img;
-				width = imgd.width;
-				if (typeOf(imgd.data) == "CanvasPixelArray")
-					buf8 = new Uint8Array(imgd.data);
-				else
-					buf8 = imgd.data;
-			case "Array":
-			case "CanvasPixelArray":
-				buf8 = buf8 || new Uint8Array(img);
-			case "Uint8Array":
-			case "Uint8ClampedArray":
-				buf8 = buf8 || img;
-				buf32 = new Uint32Array(buf8.buffer);
-			case "Uint32Array":
-				buf32 = buf32 || img;
-				buf8 = buf8 || new Uint8Array(buf32.buffer);
-				width = width || buf32.length;
-				height = buf32.length / width;
-		}
-
-		return {
-			can   : can,
-			ctx   : ctx,
-			imgd  : imgd,
-			buf8  : buf8,
-			buf32 : buf32,
-			width : width,
-			height: height
-		};
-	}
-
 	// partitions a rect of wid x hgt into
 	// array of bboxes of w0 x h0 (or less)
 	export function makeBoxes(wid, hgt, w0, h0) {
