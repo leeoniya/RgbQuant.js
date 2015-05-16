@@ -92,6 +92,7 @@ module ColorQuantization {
 
 		// TODO: group very low lum and very high lum colors
 		// TODO: pass custom sort order
+		// TODO: sort criteria function should be placed to HueStats class
 		public sort(hueGroups : number) {
 			this._paletteArray.sort((a : Point, b : Point) => {
 				var rgbA = a.rgba,
@@ -101,8 +102,8 @@ module ColorQuantization {
 					hslB = Utils.rgb2hsl(rgbB[ 0 ], rgbB[ 1 ], rgbB[ 2 ]);
 
 				// sort all grays + whites together
-				var hueA = (rgbA[ 0 ] == rgbA[ 1 ] && rgbA[ 1 ] == rgbA[ 2 ]) ? -1 : Utils.hueGroup(hslA.h, hueGroups);
-				var hueB = (rgbB[ 0 ] == rgbB[ 1 ] && rgbB[ 1 ] == rgbB[ 2 ]) ? -1 : Utils.hueGroup(hslB.h, hueGroups);
+				var hueA = (rgbA[ 0 ] == rgbA[ 1 ] && rgbA[ 1 ] == rgbA[ 2 ]) ? 0 : 1 + Utils.hueGroup(hslA.h, hueGroups);
+				var hueB = (rgbB[ 0 ] == rgbB[ 1 ] && rgbB[ 1 ] == rgbB[ 2 ]) ? 0 : 1 + Utils.hueGroup(hslB.h, hueGroups);
 
 				var hueDiff = hueB - hueA;
 				if (hueDiff) return -hueDiff;

@@ -15,9 +15,9 @@ module ColorQuantization {
 		constructor(numGroups : number, minCols : number) {
 			this._numGroups = numGroups;
 			this._minCols = minCols;
-			this._stats = {};
+			this._stats = [];
 
-			for (var i = -1; i < numGroups; i++) {
+			for (var i = 0; i <= numGroups; i++) {
 				this._stats[i] = new HueGroup();
 			}
 
@@ -34,7 +34,7 @@ module ColorQuantization {
 				g = (i32 >>> 8) & 0xff,
 				b = (i32 >>> 16) & 0xff,
 				a = (i32 >>> 24) & 0xff,
-				hg = (r == g && g == b) ? -1 : Utils.hueGroup(Utils.rgb2hsl(r, g, b).h, this._numGroups),
+				hg = (r == g && g == b) ? 0 : 1 + Utils.hueGroup(Utils.rgb2hsl(r, g, b).h, this._numGroups),
 				gr : HueGroup = this._stats[ hg ],
 				min = this._minCols;
 
@@ -50,7 +50,7 @@ module ColorQuantization {
 		}
 
 		public inject(histG) {
-			for (var i = -1; i < this._numGroups; i++) {
+			for (var i = 0; i <= this._numGroups; i++) {
 				if (this._stats[ i ].num <= this._minCols) {
 					switch (Utils.typeOf(histG)) {
 						case "Array":

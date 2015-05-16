@@ -93,7 +93,7 @@ module ColorQuantization {
 			this._minHueCols = this._colors << 2;//opts.minHueCols || 0;
 
 			// HueStatistics instance
-			this._hueStats = this._minHueCols ? new HueStatistics(this._hueGroups, this._minHueCols) : null;
+			this._hueStats = new HueStatistics(this._hueGroups, this._minHueCols);
 
 			// dithering/error diffusion kernel name
 			if (typeof this._dithKern === "number") this._dithKern = opts.dithKern;
@@ -106,10 +106,10 @@ module ColorQuantization {
 		public sample(pointBuffer : PointBuffer) {
 			switch (this._method) {
 				case 1:
-					this.colorStats1D(pointBuffer);
+					this._colorStats1D(pointBuffer);
 					break;
 				case 2:
-					this.colorStats2D(pointBuffer);
+					this._colorStats2D(pointBuffer);
 					break;
 			}
 		}
@@ -212,7 +212,21 @@ module ColorQuantization {
 			return pointBuffer;
 		}
 
-		public getImportanceSortedColorsIDXI32() {
+
+		// reduces histogram to palette, remaps & memoizes reduced colors
+		public palette() : Palette {
+			var idxi32 = this._getImportanceSortedColorsIDXI32(),
+				palette : Palette = this._buildPalette(idxi32);
+
+			palette.sort(this._hueGroups);
+			return palette;
+/*
+			var uint32Array = this._palette._paletteArray.map(point => point.uint32);
+			return tuples ? this._palette._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
+*/
+		}
+
+		private _getImportanceSortedColorsIDXI32() {
 			var sorted = Utils.sortedHashKeys(this._histogram, true);
 
 			if (sorted.length == 0)
@@ -232,8 +246,7 @@ module ColorQuantization {
 						idxi32.push(sorted[ pos++ ]);
 
 					// inject min huegroup colors
-					if (this._hueStats)
-						this._hueStats.inject(idxi32);
+					this._hueStats.inject(idxi32);
 
 					break;
 				case 2:
@@ -247,49 +260,6 @@ module ColorQuantization {
 			});
 
 			return idxi32;
-		}
-
-		// reduces histogram to palette, remaps & memoizes reduced colors
-		public palette() : Palette {
-			var idxi32 = this.getImportanceSortedColorsIDXI32(),
-				palette : Palette = this._buildPalette(idxi32);
-
-			palette.sort(this._hueGroups);
-			return palette;
-/*
-			var uint32Array = this._palette._paletteArray.map(point => point.uint32);
-			return tuples ? this._palette._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
-*/
-		}
-
-		// TODO: not tested method
-		private _reducePalette(palette : Palette, colors : number) {
-			if (palette._paletteArray.length > colors) {
-				var idxi32 = this.getImportanceSortedColorsIDXI32();
-
-				// quantize histogram to existing palette
-				var keep = [], uniqueColors = 0, idx, pruned = false;
-
-				for (var i = 0, len = idxi32.length; i < len; i++) {
-					// palette length reached, unset all remaining colors (sparse palette)
-					if (uniqueColors >= colors) {
-						palette.prunePal(keep);
-						pruned = true;
-						break;
-					} else {
-						idx = palette.nearestIndex(idxi32[i]);
-						if (keep.indexOf(idx) < 0) {
-							keep.push(idx);
-							uniqueColors++;
-						}
-					}
-				}
-
-				if (!pruned) {
-					palette.prunePal(keep);
-					pruned = true;
-				}
-			}
 		}
 
 		// reduces similar colors from an importance-sorted Uint32 rgba array
@@ -372,8 +342,38 @@ module ColorQuantization {
 			return palette;
 		}
 
+		// TODO: not tested method
+		private _reducePalette(palette : Palette, colors : number) {
+			if (palette._paletteArray.length > colors) {
+				var idxi32 = this._getImportanceSortedColorsIDXI32();
+
+				// quantize histogram to existing palette
+				var keep = [], uniqueColors = 0, idx, pruned = false;
+
+				for (var i = 0, len = idxi32.length; i < len; i++) {
+					// palette length reached, unset all remaining colors (sparse palette)
+					if (uniqueColors >= colors) {
+						palette.prunePal(keep);
+						pruned = true;
+						break;
+					} else {
+						idx = palette.nearestIndex(idxi32[i]);
+						if (keep.indexOf(idx) < 0) {
+							keep.push(idx);
+							uniqueColors++;
+						}
+					}
+				}
+
+				if (!pruned) {
+					palette.prunePal(keep);
+					pruned = true;
+				}
+			}
+		}
+
 		// global top-population
-		public colorStats1D(pointBuffer : PointBuffer) {
+		private _colorStats1D(pointBuffer : PointBuffer) {
 			var histG = this._histogram,
 				pointArray = pointBuffer.getPointArray(),
 				len = pointArray.length;
@@ -385,8 +385,7 @@ module ColorQuantization {
 				//if ((col & 0xff000000) >> 24 == 0) continue;
 
 				// collect hue stats
-				if (this._hueStats)
-					this._hueStats.check(col);
+				this._hueStats.check(col);
 
 				if (col in histG)
 					histG[ col ]++;
@@ -398,7 +397,7 @@ module ColorQuantization {
 		// population threshold within subregions
 		// FIXME: this can over-reduce (few/no colors same?), need a way to keep
 		// important colors that dont ever reach local thresholds (gradients?)
-		public colorStats2D(pointBuffer : PointBuffer) {
+		private _colorStats2D(pointBuffer : PointBuffer) {
 			var width = pointBuffer.getWidth(),
 				height = pointBuffer.getHeight(),
 				pointArray = pointBuffer.getPointArray();
@@ -413,15 +412,14 @@ module ColorQuantization {
 				var effc = Math.max(Math.round((box.w * box.h) / area) * this._boxPxls, 2),
 					histL = {}, col;
 
-				this.iterBox(box, width, function (i) {
+				this._iterBox(box, width, function (i) {
 					col = pointArray[i].uint32;
 
 					// skip transparent
 					//if ((col & 0xff000000) >> 24 == 0) return;
 
 					// collect hue stats
-					if (this._hueStats)
-						this._hueStats.check(col);
+					this._hueStats.check(col);
 
 					if (col in histG)
 						histG[ col ]++;
@@ -434,12 +432,12 @@ module ColorQuantization {
 				});
 			}, this);
 
-			if (this._hueStats)
-				this._hueStats.inject(histG);
+			// inject min huegroup colors
+			this._hueStats.inject(histG);
 		}
 
 		// iterates @bbox within a parent rect of width @wid; calls @fn, passing index within parent
-		public iterBox(bbox, wid, fn) {
+		private _iterBox(bbox, wid, fn) {
 			var b = bbox,
 				i0 = b.y * wid + b.x,
 				i1 = (b.y + b.h - 1) * wid + (b.x + b.w - 1),
@@ -449,15 +447,6 @@ module ColorQuantization {
 				fn.call(this, i);
 				i += (++cnt % b.w == 0) ? incr : 1;
 			} while (i <= i1);
-		}
-
-
-		// TODO: do we need this caching? we will build cache during first usage of each color. disabled for now
-		public cacheHistogram(idxi32) {
-/*
-			for (var i = 0, i32 = idxi32[ i ]; i < idxi32.length && this._histogram[ i32 ] >= this._cacheFreq; i32 = idxi32[ i++ ])
-				this._i32idx[ i32 ] = this.nearestIndex(i32);
-*/
 		}
 	}
 
