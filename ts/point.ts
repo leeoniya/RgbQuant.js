@@ -13,11 +13,47 @@ module ColorQuantization {
 		public uint32 : number;
 		public rgba : number[]; // TODO: better name is quadruplet or quad may be?
 
-		constructor(...args : number[]) {
+		static createByQuadruplet(quadruplet : number[]) : Point {
+			var point : Point = new Point();
+
+			point.r = quadruplet[0] | 0;
+			point.g = quadruplet[1] | 0;
+			point.b = quadruplet[2] | 0;
+			point.a = quadruplet[3] | 0;
+			point._loadUINT32();
+			point._loadQuadruplet();
+
+			return point;
+		}
+
+		static createByRGBA(red : number, green : number, blue : number, alpha : number): Point {
+			var point : Point = new Point();
+
+			point.r = red | 0;
+			point.g = green | 0;
+			point.b = blue | 0;
+			point.a = alpha | 0;
+			point._loadUINT32();
+			point._loadQuadruplet();
+
+			return point;
+		}
+
+		static createByUint32(uint32 : number) : Point {
+			var point : Point = new Point();
+
+			point.uint32 = uint32 >>> 0;
+			point._loadRGBA();
+			point._loadQuadruplet();
+
+			return point;
+		}
+
+		constructor(/*...args : number[]*/) {
 			this.r = this.g = this.b = this.a = 0;
 			this.rgba = [ this.r , this.g , this.b , this.a ];
 			this.uint32 = -1 >>> 0;
-			this.set(...args);
+			//this.set(...args);
 		}
 
 		public from(point : Point) {

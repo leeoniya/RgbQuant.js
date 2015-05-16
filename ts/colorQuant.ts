@@ -1,9 +1,9 @@
 /*
-* Copyright (c) 2015, Leon Sorokin
-* All rights reserved. (MIT Licensed)
-*
-* RgbQuant.js - an image quantization lib
-*/
+ * Copyright (c) 2015, Leon Sorokin
+ * All rights reserved. (MIT Licensed)
+ *
+ * RgbQuant.js - an image quantization lib
+ */
 
 /// <reference path='./point.ts' />
 /// <reference path='./palette.ts' />
@@ -45,7 +45,7 @@ module ColorQuantization {
 		private _hueStats : HueStatistics;
 
 		// subregion partitioning box size
-		private _boxSize = [ 64, 64 ];
+		private _boxSize = [64, 64];
 
 		// number of same pixels required within box for histogram inclusion
 		private _boxPxls = 2;
@@ -68,12 +68,6 @@ module ColorQuantization {
 		// accumulated histogram
 		private _histogram = {};
 
-		//private _paletteArray : Point[] = [];
-		private _palette : Palette;
-
-		// enable color caching (also incurs overhead of cache misses and cache building)
-		private _useCache = true;
-
 		// min color occurance count needed to qualify for caching
 		private _cacheFreq = 10;
 
@@ -92,14 +86,14 @@ module ColorQuantization {
 			// if > 0, enables hues stats and min-color retention per group
 			this._minHueCols = this._colors << 2;//opts.minHueCols || 0;
 
-			// HueStatistics instance
-			this._hueStats = new HueStatistics(this._hueGroups, this._minHueCols);
-
 			// dithering/error diffusion kernel name
 			if (typeof this._dithKern === "number") this._dithKern = opts.dithKern;
 
 			// accumulated histogram
 			this._histogram = {};
+
+			// HueStatistics instance
+			this._hueStats = new HueStatistics(this._hueGroups, this._minHueCols);
 		}
 
 		// gathers histogram info
@@ -126,52 +120,67 @@ module ColorQuantization {
 			// reduce w/dither
 			var start = Date.now();
 
-			console.profile("__!dither");
+			//console.profile("__!dither");
 			if (dithKern) {
-				pointBuffer = this.dither(pointBuffer, palette, dithKern, dithSerp);
+				//pointBuffer = this.ditherRiemer(pointBuffer, palette);
+				pointBuffer = this.dither(pointBuffer, palette, dithKern);
+			} else {
+				var pointArray = pointBuffer.getPointArray();
+				for (var i = 0, len = pointArray.length; i < len; i++) {
+					pointArray[ i ].from(palette.nearestColor(pointArray[ i ]));
+				}
 			}
-			(<any>console).profileEnd("__!dither");
+			//(<any>console).profileEnd("__!dither");
 			console.log("[dither]: " + (Date.now() - start));
 
-			var pointArray = pointBuffer.getPointArray(),
-				len : number = pointArray.length;
+			/*
+			 var pointArray = pointBuffer.getPointArray(),
+			 len : number = pointArray.length;
 
-			for (var i = 0; i < len; i++) {
-				pointArray[ i ].from(palette.nearestColor(pointArray[ i ]));
-			}
+			 for (var i = 0; i < len; i++) {
+			 for(var p = 0, found = false; p < palette._paletteArray.length; p++) {
+			 if(palette._paletteArray[p].uint32 === pointArray[i].uint32) {
+			 found = true;
+			 }
+			 }
+			 if(!found) throw new Error("x");
+			 //pointArray[ i ].from(palette.nearestColor(pointArray[ i ]));
+			 }
 
+			 */
 			return pointBuffer;
 		}
 
 		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
-		public dither(pointBuffer : PointBuffer, palette : Palette, kernel, serpentine) : PointBuffer {
-			if (!kernel || !kernels[ kernel ]) {
+		public dither(pointBuffer : PointBuffer, palette : Palette, kernel) : PointBuffer {
+			if (!kernel || !kernels[kernel]) {
 				throw 'Unknown dithering kernel: ' + kernel;
 			}
 
-			var ds = kernels[ kernel ];
+			var ds = kernels[kernel];
 
 			var pointArray = pointBuffer.getPointArray(),
-				width = pointBuffer.getWidth(),
-				height = pointBuffer.getHeight(),
-				dir = serpentine ? -1 : 1;
+				width      = pointBuffer.getWidth(),
+				height     = pointBuffer.getHeight(),
+				dir        = 1;
 
 			//(<any>console).profile("dither");
 			for (var y = 0; y < height; y++) {
-				if (serpentine)
-					dir = dir * -1;
+				// always serpentine
+				if (true) dir = dir * -1;
 
-				var lni = y * width;
+				var lni    = y * width,
+					xStart = dir == 1 ? 0 : width - 1,
+					xEnd   = dir == 1 ? width : -1;
 
-				for (var x = (dir == 1 ? 0 : width - 1), xend = (dir == 1 ? width : 0); x !== xend; x += dir) {
+				for (var x = xStart, idx = lni + xStart; x !== xEnd; x += dir, idx += dir) {
 					// Image pixel
-					var idx = lni + x,
-						p1 = pointArray[ idx ];
+					var p1 = pointArray[idx];
 
 					// Reduced pixel
 					var point = palette.nearestColor(p1);
 
-					pointArray[ idx ] = point;
+					pointArray[idx] = point;
 
 					// dithering strength
 					if (this._dithDelta) {
@@ -186,16 +195,19 @@ module ColorQuantization {
 						eb = p1.b - point.b,
 						ea = p1.a - point.a;
 
-					for (var i = (dir == 1 ? 0 : ds.length - 1), end = (dir == 1 ? ds.length : 0); i !== end; i += dir) {
-						var x1 = ds[ i ][ 1 ] * dir,
-							y1 = ds[ i ][ 2 ];
+					var dStart = dir == 1 ? 0 : ds.length - 1,
+						dEnd   = dir == 1 ? ds.length : -1;
+
+					for (var i = dStart; i !== dEnd; i += dir) {
+						var x1 = ds[i][1] * dir,
+							y1 = ds[i][2];
 
 						var lni2 = y1 * width;
 
 						if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
-							var d = ds[ i ][ 0 ];
+							var d = ds[i][0];
 							var idx2 = idx + (lni2 + x1),
-								p3 = pointArray[idx2];
+								p3   = pointArray[idx2];
 
 							var r4 = Math.max(0, Math.min(255, p3.r + er * d)),
 								g4 = Math.max(0, Math.min(255, p3.g + eg * d)),
@@ -212,18 +224,78 @@ module ColorQuantization {
 			return pointBuffer;
 		}
 
+		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
+		/*
+		 public ditherRiemer(pointBuffer : PointBuffer, palette : Palette) : PointBuffer {
+		 var pointArray = pointBuffer.getPointArray(),
+		 width = pointBuffer.getWidth(),
+		 height = pointBuffer.getHeight(),
+		 errorArray = [],
+		 weightsArray = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32];
+
+		 var sum = 0;
+		 for(var i = 0; i < weightsArray.length; i++) {
+		 sum += weightsArray[i];
+		 }
+		 for(var i = 0; i < weightsArray.length; i++) {
+		 weightsArray[i] /= sum;
+		 }
+
+		 for(var i = 0; i < 4; i++) {
+		 errorArray[i] = [];
+		 for(var j = 0; j < weightsArray.length; j++) {
+		 errorArray[i].push(0);
+		 }
+		 }
+
+		 function simpleCurve(width, height, callback : (x : number, y : number, index : number) => void) {
+		 for (var y = 0, index = 0; y < height; y++) {
+		 for (var x = 0; x < width; x++, index++) {
+		 callback(x, y, index);
+		 }
+
+		 }
+		 }
+
+		 simpleCurve(width, height, (x, y, index) => {
+		 var p = pointArray[ index];
+
+		 for(var quadrupletIndex = 0; quadrupletIndex < errorArray.length; quadrupletIndex++) {
+		 var sum = 0;
+		 for(var errorArrayIndex = 0; errorArrayIndex < errorArray.length; errorArrayIndex++) {
+		 sum += errorArray[quadrupletIndex][errorArrayIndex] * weightsArray[errorArrayIndex];
+		 }
+
+		 p.rgba[quadrupletIndex] = Math.max(0, Math.min(255, (p.rgba[quadrupletIndex] + sum) | 0));
+		 }
+
+		 var correctedPoint = Point.createByQuadruplet(p.rgba),
+		 palettePoint = palette.nearestColor(correctedPoint);
+
+		 for(var quadrupletIndex = 0; quadrupletIndex < errorArray.length; quadrupletIndex++) {
+		 var componentErrorArray = errorArray[quadrupletIndex];
+		 componentErrorArray.shift();
+		 componentErrorArray.push(p.rgba[quadrupletIndex] - palettePoint.rgba[quadrupletIndex]);
+		 }
+
+		 p.from(palettePoint);
+		 });
+		 return pointBuffer;
+		 }
+
+		 */
 
 		// reduces histogram to palette, remaps & memoizes reduced colors
 		public palette() : Palette {
-			var idxi32 = this._getImportanceSortedColorsIDXI32(),
+			var idxi32            = this._getImportanceSortedColorsIDXI32(),
 				palette : Palette = this._buildPalette(idxi32);
 
 			palette.sort(this._hueGroups);
 			return palette;
-/*
-			var uint32Array = this._palette._paletteArray.map(point => point.uint32);
-			return tuples ? this._palette._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
-*/
+			/*
+			 var uint32Array = this._palette._paletteArray.map(point => point.uint32);
+			 return tuples ? this._palette._paletteArray : new Uint8Array((new Uint32Array(uint32Array)).buffer);
+			 */
 		}
 
 		private _getImportanceSortedColorsIDXI32() {
@@ -234,16 +306,16 @@ module ColorQuantization {
 
 			switch (this._method) {
 				case 1:
-					var initialColorsLimit = Math.min(sorted.length, this._initColors ),
-						last = sorted[ initialColorsLimit - 1 ],
-						freq = this._histogram[ last ];
+					var initialColorsLimit = Math.min(sorted.length, this._initColors),
+						last               = sorted[initialColorsLimit - 1],
+						freq               = this._histogram[last];
 
 					var idxi32 = sorted.slice(0, initialColorsLimit);
 
 					// add any cut off colors with same freq as last
 					var pos = initialColorsLimit, len = sorted.length;
-					while (pos < len && this._histogram[ sorted[ pos ] ] == freq)
-						idxi32.push(sorted[ pos++ ]);
+					while (pos < len && this._histogram[sorted[pos]] == freq)
+						idxi32.push(sorted[pos++]);
 
 					// inject min huegroup colors
 					this._hueStats.inject(idxi32);
@@ -264,10 +336,9 @@ module ColorQuantization {
 
 		// reduces similar colors from an importance-sorted Uint32 rgba array
 		private _buildPalette(idxi32) {
-			var palette : Palette = new Palette();
-
 			// reduce histogram to create initial palette
 			// build full rgb palette
+
 			var idxrgb = idxi32.map(function (i32) {
 				return [
 					(i32 & 0xff),
@@ -276,6 +347,15 @@ module ColorQuantization {
 					(i32 >>> 24) & 0xff
 				];
 			});
+			/*
+			 var workPalette : Palette = new Palette(),
+			 pointArray = workPalette._paletteArray,
+			 pointIndex, l;
+
+			 for(pointIndex = 0, l = idxi32.length; pointIndex < l; pointIndex++) {
+			 pointArray.push(new Point(idxi32[pointIndex]));
+			 }
+			 */
 
 			var len    = idxrgb.length,
 				palLen = len,
@@ -322,7 +402,7 @@ module ColorQuantization {
 					});
 
 					var k = 0;
-					while (palLen < this._colors) {
+					while (palLen < this._colors && k < memDist.length) {
 						// re-inject rgb into final palette
 						idxrgb[memDist[k][0]] = memDist[k][1];
 
@@ -332,12 +412,18 @@ module ColorQuantization {
 				}
 			}
 
-			for (var i = 0, len = idxrgb.length; i < len; i++) {
-				if (!idxrgb[i]) continue;
-
-				var point : Point = new Point(idxrgb[i]);
-				palette._paletteArray.push(point);
+			var palette : Palette = new Palette();
+			for (var pointIndex = 0, l = idxrgb.length; pointIndex < l; pointIndex++) {
+				if (!idxrgb[pointIndex]) continue;
+				palette._paletteArray.push(Point.createByQuadruplet(idxrgb[pointIndex]));
 			}
+			/*
+			 var palette : Palette = new Palette();
+			 for (pointIndex = 0, l = pointArray.length; pointIndex < l; pointIndex++) {
+			 if (!pointArray[pointIndex]) continue;
+			 palette._paletteArray.push(pointArray[pointIndex]);
+			 }
+			 */
 
 			return palette;
 		}
@@ -374,9 +460,9 @@ module ColorQuantization {
 
 		// global top-population
 		private _colorStats1D(pointBuffer : PointBuffer) {
-			var histG = this._histogram,
+			var histG      = this._histogram,
 				pointArray = pointBuffer.getPointArray(),
-				len = pointArray.length;
+				len        = pointArray.length;
 
 			for (var i = 0; i < len; i++) {
 				var col = pointArray[i].uint32;
@@ -388,9 +474,9 @@ module ColorQuantization {
 				this._hueStats.check(col);
 
 				if (col in histG)
-					histG[ col ]++;
+					histG[col]++;
 				else
-					histG[ col ] = 1;
+					histG[col] = 1;
 			}
 		}
 
@@ -398,19 +484,20 @@ module ColorQuantization {
 		// FIXME: this can over-reduce (few/no colors same?), need a way to keep
 		// important colors that dont ever reach local thresholds (gradients?)
 		private _colorStats2D(pointBuffer : PointBuffer) {
-			var width = pointBuffer.getWidth(),
-				height = pointBuffer.getHeight(),
+			var width      = pointBuffer.getWidth(),
+				height     = pointBuffer.getHeight(),
 				pointArray = pointBuffer.getPointArray();
 
-			var boxW = this._boxSize[ 0 ],
-				boxH = this._boxSize[ 1 ],
-				area = boxW * boxH,
+			var boxW  = this._boxSize[0],
+				boxH  = this._boxSize[1],
+				area  = boxW * boxH,
 				boxes = Utils.makeBoxes(width, height, boxW, boxH),
 				histG = this._histogram;
 
 			boxes.forEach(function (box) {
-				var effc = Math.max(Math.round((box.w * box.h) / area) * this._boxPxls, 2),
-					histL = {}, col;
+				var effc  = Math.max(Math.round((box.w * box.h) / area) * this._boxPxls, 2),
+					histL = {},
+					col;
 
 				this._iterBox(box, width, function (i) {
 					col = pointArray[i].uint32;
@@ -422,13 +509,13 @@ module ColorQuantization {
 					this._hueStats.check(col);
 
 					if (col in histG)
-						histG[ col ]++;
+						histG[col]++;
 					else if (col in histL) {
-						if (++histL[ col ] >= effc)
-							histG[ col ] = histL[ col ];
+						if (++histL[col] >= effc)
+							histG[col] = histL[col];
 					}
 					else
-						histL[ col ] = 1;
+						histL[col] = 1;
 				});
 			}, this);
 
@@ -438,9 +525,9 @@ module ColorQuantization {
 
 		// iterates @bbox within a parent rect of width @wid; calls @fn, passing index within parent
 		private _iterBox(bbox, wid, fn) {
-			var b = bbox,
-				i0 = b.y * wid + b.x,
-				i1 = (b.y + b.h - 1) * wid + (b.x + b.w - 1),
+			var b   = bbox,
+				i0  = b.y * wid + b.x,
+				i1  = (b.y + b.h - 1) * wid + (b.x + b.w - 1),
 				cnt = 0, incr = wid - b.w + 1, i = i0;
 
 			do {

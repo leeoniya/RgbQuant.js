@@ -27,8 +27,6 @@ module ColorQuantization {
 
 			idx = 0;
 			for (var i = 0; i < len; i++) {
-				if (!this._paletteArray[i]) continue;		// sparse palettes
-
 				var dist = Utils.distEuclidean(rgb, this._paletteArray[i].rgba);
 
 				if (dist < min) {
@@ -52,8 +50,6 @@ module ColorQuantization {
 			var minimalDistance : number = 1000.0;
 
 			for (var idx = 0, i = 0, l = this._paletteArray.length; i < l; i++) {
-				if (!this._paletteArray[i]) continue;		// sparse palettes
-
 				var distance = Utils.distEuclidean(point.rgba, this._paletteArray[i].rgba);
 
 				if (distance < minimalDistance) {
@@ -81,8 +77,7 @@ module ColorQuantization {
 
 			for (var j = 0, i = 0; j < this._paletteArray.length; j++) {
 				if (this._paletteArray[j]) {
-					point = this._paletteArray[j];
-					compactedPaletteArray[i] = point;
+					compactedPaletteArray[i] = this._paletteArray[j];
 					i++;
 				}
 			}

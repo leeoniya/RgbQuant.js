@@ -99,7 +99,7 @@ module ColorQuantization {
 
 			this._pointArray = [];//new Array(uint32array.length);
 			for(var i = 0, l = uint32array.length; i < l; i++) {
-				this._pointArray[i] = new Point(uint32array[i] | 0); // "| 0" is added for v8 optimization
+				this._pointArray[i] = Point.createByUint32(uint32array[i] | 0); // "| 0" is added for v8 optimization
 			}
 		}
 
