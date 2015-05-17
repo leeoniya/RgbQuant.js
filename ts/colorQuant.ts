@@ -123,12 +123,32 @@ module ColorQuantization {
 			//console.profile("__!dither");
 			if (dithKern) {
 				//pointBuffer = this.ditherRiemer(pointBuffer, palette);
-				pointBuffer = this.dither(pointBuffer, palette, dithKern);
+
+				if(typeof window["ditherx"] === "undefined") window["ditherx"] = true;
+				if( window["ditherx"]) {
+					pointBuffer = this.ditherFixWithCyclic(pointBuffer, palette, dithKern);
+					console.log("new (FIXED) dither")
+				} else {
+					pointBuffer = this.dither(pointBuffer, palette, dithKern);
+					console.log("old dither")
+				}
+				window["ditherx"] = !window["ditherx"];
 			} else {
 				var pointArray = pointBuffer.getPointArray();
 				for (var i = 0, len = pointArray.length; i < len; i++) {
 					pointArray[ i ].from(palette.nearestColor(pointArray[ i ]));
 				}
+			}
+			var pointArray = pointBuffer.getPointArray(),
+				len = pointArray.length;
+
+			for (var i = 0; i < len; i++) {
+				for (var p = 0, found = false; p < palette._paletteArray.length; p++) {
+					if (palette._paletteArray[p].uint32 === pointArray[i].uint32) {
+						found = true;
+					}
+				}
+				if (!found) throw new Error("x");
 			}
 			//(<any>console).profileEnd("__!dither");
 			console.log("[dither]: " + (Date.now() - start));
@@ -225,6 +245,192 @@ module ColorQuantization {
 		}
 
 		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
+		// TODO: fixed version. it doesn't use image pixels as error storage
+		public ditherFix(pointBuffer : PointBuffer, palette : Palette, kernel) : PointBuffer {
+			if (!kernel || !kernels[kernel]) {
+				throw 'Unknown dithering kernel: ' + kernel;
+			}
+
+			var ds = kernels[kernel];
+
+			var pointArray = pointBuffer.getPointArray(),
+				width      = pointBuffer.getWidth(),
+				height     = pointBuffer.getHeight(),
+				dir        = 1,
+				errors = [];
+
+			for(var i = 0; i < width * height; i++) errors[i] = [0,0,0,0];
+
+			//(<any>console).profile("dither");
+			for (var y = 0; y < height; y++) {
+				// always serpentine
+				if (true) dir = dir * -1;
+
+				var lni    = y * width,
+					xStart = dir == 1 ? 0 : width - 1,
+					xEnd   = dir == 1 ? width : -1;
+
+				for (var x = xStart, idx = lni + xStart; x !== xEnd; x += dir, idx += dir) {
+					// Image pixel
+					var p1 = pointArray[idx];
+
+					var r4 = Math.max(0, Math.min(255, p1.r + errors[idx][0])),
+						g4 = Math.max(0, Math.min(255, p1.g + errors[idx][1])),
+						b4 = Math.max(0, Math.min(255, p1.b + errors[idx][2])),
+						a4 = Math.max(0, Math.min(255, p1.a + errors[idx][3]));
+
+					var np = Point.createByRGBA(r4, g4, b4, a4);
+
+					// Reduced pixel
+					var point = palette.nearestColor(np);
+
+					pointArray[idx].from(point);
+
+					// dithering strength
+					if (this._dithDelta) {
+						var dist = Utils.distEuclidean(p1.rgba, point.rgba);
+						if (dist < this._dithDelta)
+							continue;
+					}
+
+					// Component distance
+					point = np;
+					var er = p1.r - point.r,
+						eg = p1.g - point.g,
+						eb = p1.b - point.b,
+						ea = p1.a - point.a;
+
+					var dStart = dir == 1 ? 0 : ds.length - 1,
+						dEnd   = dir == 1 ? ds.length : -1;
+
+					for (var i = dStart; i !== dEnd; i += dir) {
+						var x1 = ds[i][1] * dir,
+							y1 = ds[i][2];
+
+						var lni2 = y1 * width;
+
+						if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
+							var d = ds[i][0];
+							var idx2 = idx + (lni2 + x1),
+								e = errors[idx2];
+
+							e[0] = e[0] -er * d;
+							e[1] = e[1] -eg * d;
+							e[2] = e[2] -eb * d;
+							e[3] = e[3] -ea * d;
+
+							//pointArray[idx2].set(r4, g4, b4, a4);
+						}
+					}
+				}
+			}
+
+			//(<any>console).profileEnd("dither");
+			return pointBuffer;
+		}
+		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
+		// TODO: fixed version. it doesn't use image pixels as error storage
+		public ditherFixWithCyclic(pointBuffer : PointBuffer, palette : Palette, kernel) : PointBuffer {
+			if (!kernel || !kernels[kernel]) {
+				throw 'Unknown dithering kernel: ' + kernel;
+			}
+
+			var ds = kernels[kernel];
+
+			function fillErrorLine(errorLine : number[][], width : number) {
+				for(var i = 0; i < width; i++) {
+					errorLine[i] = [0, 0,0 , 0];
+				}
+				if(errorLine.length > width) {
+					errorLine.length = width;
+				}
+			}
+
+			var pointArray = pointBuffer.getPointArray(),
+				width      = pointBuffer.getWidth(),
+				height     = pointBuffer.getHeight(),
+				dir        = 1,
+				errorLines = [];
+
+			// initial error lines (number is taken from kernel)
+			for(var i = 0, maxErrorLines = 1; i < ds.length; i++) {
+				maxErrorLines = Math.max(maxErrorLines, ds[i][2] + 1);
+			}
+			for(var i = 0; i < maxErrorLines; i++) {
+				fillErrorLine(errorLines[ i ] = [], width);
+			}
+
+			//(<any>console).profile("dither");
+			for (var y = 0; y < height; y++) {
+				// always serpentine
+				if (true) dir = dir * -1;
+
+				var lni    = y * width,
+					xStart = dir == 1 ? 0 : width - 1,
+					xEnd   = dir == 1 ? width : -1;
+
+				// cyclic shift with erasing
+				fillErrorLine(errorLines[ 0 ], width);
+				errorLines.push(errorLines.shift());
+
+				var errorLine = errorLines[0];
+
+				for (var x = xStart, idx = lni + xStart; x !== xEnd; x += dir, idx += dir) {
+					// Image pixel
+					var p1 = pointArray[idx],
+						error = errorLine[x];
+
+					var r4 = Math.max(0, Math.min(255, p1.r + error[0])),
+						g4 = Math.max(0, Math.min(255, p1.g + error[1])),
+						b4 = Math.max(0, Math.min(255, p1.b + error[2])),
+						a4 = Math.max(0, Math.min(255, p1.a + error[3]));
+
+					var np = Point.createByRGBA(r4, g4, b4, a4);
+
+					// Reduced pixel
+					var point = palette.nearestColor(np);
+
+					pointArray[idx].from(point);
+
+					// dithering strength
+					if (this._dithDelta) {
+						var dist = Utils.distEuclidean(p1.rgba, point.rgba);
+						if (dist < this._dithDelta)
+							continue;
+					}
+
+					// Component distance
+					point = np;
+					var er = p1.r - point.r,
+						eg = p1.g - point.g,
+						eb = p1.b - point.b,
+						ea = p1.a - point.a;
+
+					var dStart = dir == 1 ? 0 : ds.length - 1,
+						dEnd   = dir == 1 ? ds.length : -1;
+
+					for (var i = dStart; i !== dEnd; i += dir) {
+						var x1 = ds[i][1] * dir,
+							y1 = ds[i][2];
+
+						if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
+							var d = ds[i][0],
+								e = errorLines[y1][x1 + x];
+
+							e[0] = e[0] -er * d;
+							e[1] = e[1] -eg * d;
+							e[2] = e[2] -eb * d;
+							e[3] = e[3] -ea * d;
+						}
+					}
+				}
+			}
+
+			//(<any>console).profileEnd("dither");
+			return pointBuffer;
+		}
+
+		// adapted from http://jsbin.com/iXofIji/2/edit by PAEz
 		/*
 		 public ditherRiemer(pointBuffer : PointBuffer, palette : Palette) : PointBuffer {
 		 var pointArray = pointBuffer.getPointArray(),
@@ -285,12 +491,37 @@ module ColorQuantization {
 
 		 */
 
+/*
+		public paletteMedianCut () {
+			var idxi32            = this._getImportanceSortedColorsIDXI32(),
+				palette : Palette = new Palette();
+
+			var idxrgb = idxi32.map(function (i32) {
+				return [
+					(i32 & 0xff),
+					(i32 >>> 8) & 0xff,
+					(i32 >>> 16) & 0xff,
+					(i32 >>> 24) & 0xff
+				];
+			});
+
+			init(idxrgb);
+			var arr = get_fixed_size_palette(this._colors);
+			for(var i = 0; i < arr.length; i++) {
+				palette._paletteArray.push(Point.createByQuadruplet(arr[i]));
+			}
+			console.log("MedianCut");
+			return palette;
+		}
+*/
+
 		// reduces histogram to palette, remaps & memoizes reduced colors
 		public palette() : Palette {
 			var idxi32            = this._getImportanceSortedColorsIDXI32(),
 				palette : Palette = this._buildPalette(idxi32);
 
 			palette.sort(this._hueGroups);
+			console.log("Original");
 			return palette;
 			/*
 			 var uint32Array = this._palette._paletteArray.map(point => point.uint32);

@@ -113,6 +113,7 @@ function process(srcs) {
 		var pal8;
 		ti.mark("build palette", function() {
 			pal8 = quant.palette();
+			//pal8 = quant.paletteMedianCut();
 		});
 
 		// TODO: temporary solution. see Palette class todo
@@ -129,6 +130,25 @@ function process(srcs) {
 
 			var img8;
 			ti.mark("reduce '" + id + "'", function() {
+/*
+				pal8 = new ColorQuantization.Palette();
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(10,49,4,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(80,148,15,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(149,172,45,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(173,209,79,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(181,215,166,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(161,176,175,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(219,231,196,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,236,56,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(116,167,148,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(200,20,128,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(54,101,7,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(196,94,54,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,92,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(58,235,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(200,92,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,20,200,255));
+*/
 				img8 = quant.reduce(pointBuffers[index], pal8).exportUint8Array();
 			});
 

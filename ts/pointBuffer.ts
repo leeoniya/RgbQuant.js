@@ -40,6 +40,16 @@ module ColorQuantization {
 			return this._pointArray;
 		}
 
+		public importPointBuffer(pointBuffer : PointBuffer) : void {
+			this._width = pointBuffer._width;
+			this._height = pointBuffer._height;
+
+			this._pointArray = [];
+			for(var i = 0, l = pointBuffer._pointArray.length; i < l; i++) {
+				this._pointArray[i] = Point.createByUint32(pointBuffer._pointArray[i].uint32 | 0); // "| 0" is added for v8 optimization
+			}
+		}
+
 		public importHTMLImageElement(img : HTMLImageElement) : void {
 			var width = img.naturalWidth,
 				height = img.naturalHeight;
