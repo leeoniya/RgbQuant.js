@@ -10,8 +10,11 @@ History
   - kernels: https://github.com/eurica/makeplayingcards/blob/master/partial_imagemagick/thresholds.xml
 - ~~CIEDE2000 color-diff option~~ _sooooo sloooow_ (see ciede2000 branch)
 
-#### 1.1.2 _(2015-??-??)_
+#### 1.1.3 _(2015-??-??)_
 - Fix transparent bg when dithering (#7)
+
+#### 1.1.2 _(2015-08-10)_
+- Remove some unused files
 
 #### 1.1.1 _(2015-02-04)_
 - Adds the slightly faster but less accurate Manhatten color distance as option
