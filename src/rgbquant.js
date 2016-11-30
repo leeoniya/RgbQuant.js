@@ -106,8 +106,11 @@
 
 		retType = retType || 1;
 
+		// reduce w/ordered dither
+		if (dithKern in ORDERED_DITHER_THRESHOLDS)
+			var out32 = this.orderedDither(img, dithKern);
 		// reduce w/dither
-		if (dithKern)
+		else if (dithKern)
 			var out32 = this.dither(img, dithKern, dithSerp);
 		else {
 			var data = getImageData(img),
@@ -308,6 +311,81 @@
 
 		return buf32;
 	};
+	
+	// adapted from http://bisqwit.iki.fi/story/howto/dither/jy/ "Standard ordered dithering algorithm"
+	RgbQuant.prototype.orderedDither = function(img, kernel) {
+		var map = ORDERED_DITHER_THRESHOLDS[kernel];
+
+		var data = getImageData(img),
+			buf32 = data.buf32,
+			width = data.width,
+			height = data.height,
+			len = buf32.length;
+			
+		var mapW = map.length,
+			mapH = map[0].length,
+			brightnessOffset = mapW * mapH / 3;
+			
+		var depth = this.palette(true)
+			// Transposes the array, so that [[r1,g1,b1],[r2,g2,b2]] becomes [[r1,r2],[g1,g2],[b1,b2]]
+			.reduce(function(a, rgb){
+				for (var i = 0; i != 3; i++) {
+					a[i] = a[i].concat(rgb[i]);
+				}
+				return a;
+			}, [[], [], []])
+			// Calculates the maximum distance between consecutive color values, for each channel
+			.map(function(channel){
+				var maximum = 1;
+				channel.sort(function(a, b){ return a - b }).reduce(function(prev, current){
+					maximum = Math.max(maximum, current - prev);
+					return current;
+				});
+				return maximum;
+			})
+			.map(function(distance){
+				return distance / (mapW * mapH);
+			});
+			
+		function boundColorValue(value) {
+			return Math.max(0, Math.min(255, Math.floor(value)));
+		}
+
+		for (var y = 0, mY = 0; y < height; y++) {
+			var lni = y * width;
+			
+			mY++;
+			if (mY >= mapH) mY = 0;
+			var mapRow = map[mY];
+
+			for (var x = 0, mX = 0; x !== width; x++) {
+				mX++;
+				if (mX >= mapW) mX = 0;
+				var mapValue = mapRow[mX];
+			
+				// Image pixel
+				var idx = lni + x,
+					i32 = buf32[idx],
+					r1 = (i32 & 0xff),
+					g1 = (i32 & 0xff00) >> 8,
+					b1 = (i32 & 0xff0000) >> 16;
+
+				// Reduced pixel
+				var r2 = boundColorValue(r1 + (mapValue - brightnessOffset) * depth[0]);
+					g2 = boundColorValue(g1 + (mapValue - brightnessOffset) * depth[1]);
+					b2 = boundColorValue(b1 + (mapValue - brightnessOffset) * depth[2]);
+
+				buf32[idx] = this.nearestColor(
+					(255 << 24)	|	// alpha
+					(b2  << 16)	|	// blue
+					(g2  <<  8)	|	// green
+					 r2
+				);
+			}
+		}
+		
+		return buf32;
+	}
 
 	// reduces histogram to palette, remaps & memoizes reduced colors
 	RgbQuant.prototype.buildPal = function buildPal(noSort) {
@@ -923,6 +1001,35 @@
 			return desc ? obj[b] - obj[a] : obj[a] - obj[b];
 		});
 	}
+	
+	// Threshold maps used by ordered dither
+	var ORDERED_DITHER_THRESHOLDS = {
+		Ordered2: [
+			[1, 3],
+			[4, 2]
+		],
+		Ordered3: [
+			[3, 7, 4],
+			[6, 1, 9],
+			[2, 8, 5]
+		],
+		Ordered4: [
+			[1, 9, 3, 11],
+			[13, 5, 15, 7],
+			[4, 12, 2, 10],
+			[16, 8, 14, 6]
+		],
+		Ordered8: [
+			[1, 49, 13, 61, 4, 52, 16, 64],
+			[33, 17, 45, 29, 36, 20, 48, 32],
+			[9, 57, 5, 53, 12, 60, 8, 56],
+			[41, 25, 37, 21, 44, 28, 40, 24],
+			[3, 51, 15, 63, 2, 50, 14, 62],
+			[35, 19, 47, 31, 34, 18, 46, 30],
+			[11, 59, 7, 55, 10, 58, 6, 54],
+			[43, 27, 39, 23, 42, 26, 38, 22]
+		],
+	};
 
 	// expose
 	this.RgbQuant = RgbQuant;
