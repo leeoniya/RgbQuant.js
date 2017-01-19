@@ -517,7 +517,7 @@
 		
 		// Don't re-dither if ordered dither was used.
 		var dithKern = this.quants[0].dithKern;
-		dithKern = dithKern && dithKern.contains('Ordered') ? 'None' : dithKern; 
+		dithKern = dithKern && (dithKern.indexOf('Ordered') !== -1) ? 'None' : dithKern; 
 		
 		// Creates one reduced image for each palette
 		var imgs8i = this.quants.map(function(quant){
