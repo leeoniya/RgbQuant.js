@@ -12,7 +12,7 @@ Color quantization is the process of reducing an image with thousands or million
 RgbQuant.js is not a port or implementation of any specific quantization algorithm, though some overlap is inevitable.
 
 ---
-### Demo: http://o-0.me/RgbQuant/
+### Demo: http://leeoniya.github.io/RgbQuant.js/demo/
 
 ![demo page](https://raw.githubusercontent.com/leeoniya/RgbQuant.js/master/demo_th.png "demo page")
 
@@ -57,7 +57,7 @@ var outA = q.reduce(imgA),
 ```
 ### Node.js
 
-npm package: https://www.npmjs.com/package/rgbquant  
+npm package: https://www.npmjs.com/package/rgbquant
 example with https://www.npmjs.com/package/canvas
 
 ```js
