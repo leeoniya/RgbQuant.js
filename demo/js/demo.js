@@ -23,6 +23,7 @@ var cfgs = {
 	"kitteh1":      {jpg: true},
 	"compcube":     {jpg: true},
 	"medusa":       {jpg: true},
+	"lily-pond":    {jpg: true},
 
 	"fish":         {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 4096})},
 	"kitteh2":      {jpg: true, opts: $.extend({}, dflt_opts, {minHueCols: 512})},
