@@ -1,12 +1,9 @@
 var cfg_edited = false;
 
 var dflt_opts = {
-	colors: 256,
+	colors: 1024,
 	method: 2,
-	initColors: 4096,
-	minHueCols: 0,
-	dithKern: null,
-	dithSerp: false,
+	dithKern: "SierraLite"
 };
 
 var cfgs = {
@@ -81,7 +78,8 @@ function process(srcs) {
 	ti.start();
 
 	$.getImgs(srcs, function() {
-		var imgs = arguments;
+		var imgs = [];
+		for(var i = 0, l = arguments.length; i < l; i++) imgs[i] = arguments[i];
 
 		ti.mark("image(s) loaded");
 
@@ -94,32 +92,65 @@ function process(srcs) {
 		});
 
 		var opts = (srcs.length == 1) ? getOpts(baseName(srcs[0])[0]) : dflt_opts,
-			quant = new RgbQuant(opts);
+			quant = new ColorQuantization.RgbQuant(opts),
+			pointBuffers = [];
 
-		$.each(imgs, function() {
-			var img = this, id = baseName(img.src)[0];
+
+		ti.mark("create pointBuffers", function() {
+			imgs.forEach(function (img, index) {
+				pointBuffers[index] = new ColorQuantization.PointBuffer();
+				pointBuffers[index].importHTMLImageElement(img);
+			});
+		});
+
+		imgs.forEach(function (img, index) {
+			var id = baseName(img.src)[0];
 
 			ti.mark("sample '" + id + "'", function(){
-				quant.sample(img);
+				quant.sample(pointBuffers[index]);
 			});
 		});
 
 		var pal8;
 		ti.mark("build palette", function() {
 			pal8 = quant.palette();
+			//pal8 = quant.paletteMedianCut();
 		});
 
-		var pcan = drawPixels(pal8, 16, 128);
+		// TODO: temporary solution. see Palette class todo
+		var uint32Array = pal8._paletteArray.map(function(point) { return point.uint32 });
+		var uint8array = new Uint8Array((new Uint32Array(uint32Array)).buffer);
+
+		var pcan = drawPixels(uint8array, 16, 128);
 
 		$palt.empty().append(pcan);
 
 		$redu.empty();
-		$(imgs).each(function() {
-			var img = this, id = baseName(img.src)[0];
+		imgs.forEach(function (img, index) {
+			var id = baseName(img.src)[0];
 
 			var img8;
 			ti.mark("reduce '" + id + "'", function() {
-				img8 = quant.reduce(img);
+/*
+				pal8 = new ColorQuantization.Palette();
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(10,49,4,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(80,148,15,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(149,172,45,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(173,209,79,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(181,215,166,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(161,176,175,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(219,231,196,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,236,56,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(116,167,148,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(200,20,128,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(54,101,7,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(196,94,54,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,92,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(58,235,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(200,92,200,255));
+				pal8._paletteArray.push(ColorQuantization.Point.createByRGBA(56,20,200,255));
+*/
+				img8 = quant.reduce(pointBuffers[index], pal8).exportUint8Array();
 			});
 
 			ti.mark("reduced -> DOM", function() {

@@ -7,7 +7,7 @@
 	<link rel="stylesheet" href="css/demo.css">
 
 	<script src="js/jquery-2.0.3.min.js"></script>
-	<script src="../src/rgbquant.js"></script>
+	<script src="../ts/colorQuant.js"></script>
 	<script src="js/helpers.js"></script>
 	<script src="js/preCode.js"></script>
 	<script src="js/timer.js"></script>
@@ -95,6 +95,43 @@
 				<div style="display: inline-block; vertical-align: top; width: 270px;">A single, optimal palette is progressivley generated for a set of images. Each is then reduced using it.</div>
 			</td>
 		</tr>
+		<tr>
+			<th>Alpha</th>
+			<td>
+				<img class="th" src="png/agnes-overjoyed-icon.png">
+				<img class="th" src="png/agnes-sleeping-icon.png">
+				<img class="th" src="png/Angry-Minion-icon.png">
+				<img class="th" src="png/Curious-Minion-Icon.png">
+				<img class="th" src="png/Curious-Minion-Icon-2.png">
+				<img class="th" src="png/Dancing-minion-icon.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-1.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-2.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-3.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-4.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-5.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-6.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-7.png">
+				<img class="th" src="png/despicable-me-2-Minion-icon-8.png">
+				<img class="th" src="png/Edith-despicable-me-2-icon.png">
+				<img class="th" src="png/evil-minion-icon.png">
+				<img class="th" src="png/evil-minion-icon-2.png">
+				<img class="th" src="png/Evil-Minion-Icon-3.png">
+				<img class="th" src="png/Evil-Minion-Icon-4.png">
+				<img class="th" src="png/girl-minion-icon.png">
+				<img class="th" src="png/gru-icon.png">
+				<img class="th" src="png/gru-icon-2.png">
+				<img class="th" src="png/happy-agnes-icon.png">
+				<img class="th" src="png/Happy-Minion-Icon.png">
+				<img class="th" src="png/kungfu-Minion.png">
+				<img class="th" src="png/Margo-dispicable-me-2-icon.png">
+				<img class="th" src="png/Minion-playing-golf-icon.png">
+				<img class="th" src="png/Minion-reading-icon.png">
+				<img class="th" src="png/Minion icon.png">
+				<img class="th" src="png/Sad-Agnes-Icon.png">
+				<img class="th" src="png/Shy-Minion-icon.png">
+				<img class="th" src="png/superman-minion-icon.png">
+			</td>
+		</tr>
 	<!--<tr>
 			<th>Animation<br>real-time</th>
 			<td></td>
@@ -107,9 +144,9 @@
 		<pre id="config" style="padding-left: 5px;">
             var opts = {
                 colors: <input id="colors" type="text" value="256" class="autosize">,
-                minHueCols: <input id="minHueCols" type="text" value="0" class="autosize">,
-                dithKern: <select id="dithKern"><option value=""></option><option value="FloydSteinberg">FloydSteinberg</option><option value="Stucki">Stucki</option><option value="Atkinson">Atkinson</option><option value="Jarvis">Jarvis</option><option value="Burkes">Burkes</option><option value="Sierra">Sierra</option><option value="TwoSierra">TwoSierra</option><option value="SierraLite">SierraLite</option><option value="FalseFloydSteinberg">FalseFloyd</option></select>,
-                <label>dithSerp: <input id="dithSerp" type="checkbox"></label>,
+                <!--minHueCols: <input id="minHueCols" type="text" value="0" class="autosize">,-->
+                dithKern: <select id="dithKern"><option value=""></option><option value="FloydSteinberg">FloydSteinberg</option><option value="Stucki">Stucki</option><option value="Atkinson">Atkinson</option><option value="Jarvis">Jarvis</option><option value="Burkes">Burkes</option><option value="Sierra">Sierra</option><option value="TwoSierra">TwoSierra</option><option value="SierraLite">SierraLite</option><option value="FalseFloydSteinberg">FalseFloyd</option></select>
+                <!--<label>dithSerp: <input id="dithSerp" type="checkbox"></label>,-->
             };
 		</pre>
 		<label class="custom_cfg"><input id="custom_cfg" type="checkbox"> <span>lock config</span></label>
