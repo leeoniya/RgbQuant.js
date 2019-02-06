@@ -287,6 +287,20 @@
 
 	RgbQuantSMS.prototype.normalizeTiles = function(tileMap) {
 	
+		function copyTile(orig) {
+			return {
+				number: orig.number,
+				palNum: orig.palNum,
+				popularity: orig.popularity,
+				entropy: 0,
+				flipX: orig.flipX,
+				flipY: orig.flipY,
+				pixels: orig.pixels.map(function(line){
+					return line.slice();
+				})
+			}
+		}
+
 		function copyTileFlipX(orig) {
 			return {
 				number: orig.number,
@@ -331,7 +345,7 @@
 		}
 		
 		var newTiles = tileMap.tiles.map(function(tile){
-			var orig = copyTileFlipX(tile),
+			var orig = copyTile(tile),
 				flipX = copyTileFlipX(tile),
 				flipY = copyTileFlipY(tile),
 				flipXY = copyTileFlipY(flipX);
