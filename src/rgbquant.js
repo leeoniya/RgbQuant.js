@@ -792,7 +792,11 @@
 	}
 
 	function typeOf(val) {
-		return Object.prototype.toString.call(val).slice(8,-1);
+		if (val && val.constructor && val.constructor.name) {
+			return val.constructor.name;
+		} else {
+			return Object.prototype.toString.call(val).slice(8,-1);
+		}
 	}
 
 	var sort = isArrSortStable() ? Array.prototype.sort : stableSort;
