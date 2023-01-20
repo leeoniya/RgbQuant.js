@@ -65,6 +65,7 @@
 
 		// if pre-defined palette, build lookups
 		if (this.idxrgb.length > 0) {
+			this.palLocked = true;
 			var self = this;
 			this.idxrgb.forEach(function(rgb, i) {
 				var i32 = (
