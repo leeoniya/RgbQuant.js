@@ -1,0 +1,19 @@
+{
+  "name": "rgbquant-sms",
+  "version": "0.0.2",
+  "description": "RgbQuant.js adapted for quantizing images for the Sega Master System hardware",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haroldo-ok/RgbQuant-SMS.js.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/haroldo-ok/RgbQuant-SMS.js/issues"
+  },
+  "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme"
+}
