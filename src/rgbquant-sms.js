@@ -8,6 +8,8 @@
 	
 	const RgbQuant = this.RgbQuant || require('./rgbquant').RgbQuant;
 	const _ = this._ || require('../demo/js/underscore-min');
+	const clusterfck = this.clusterfck || require('tayden-clusterfck');
+	console.log('clusterfck', clusterfck);
 
 	/**
 	 * The quantizer itself

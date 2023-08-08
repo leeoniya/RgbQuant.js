@@ -23,4 +23,9 @@ const { RgbQuantSMS } = require('./src/rgbquant-sms');
 
 	const img = await getImg('demo/img/biking.jpg');
 	console.log('img', img)
+	
+	quant.sample(img);
+	const palettes = quant.palettes();
+	console.log('palettes', palettes)
+	console.log('palettes 0', palettes[0])
 })();
