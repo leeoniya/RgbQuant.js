@@ -935,6 +935,7 @@
 				buf8 = buf8 || img.buf8;
 				width = width || img.width;
 				height = height || img.height;
+				break;
 			case "Array":
 			case "CanvasPixelArray":
 				buf8 = buf8 || new Uint8Array(img);
