@@ -17,7 +17,6 @@
   },
   "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme",
   "dependencies": {
-    "canvas": "^2.11.2",
-    "tayden-clusterfck": "^0.7.0"
+    "canvas": "^2.11.2"
   }
 }

@@ -628,3 +628,5 @@ module.exports = kmeans;
 
 });
  return require('/clusterfck')})();
+ 
+ this.clusterfck = clusterfck;
