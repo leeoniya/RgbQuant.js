@@ -15,15 +15,9 @@ const quant = new RgbQuantSMS({
 
 const getImg = async (src) => new Promise((resolve, reject) => {
 	const img = new Image();
+	img.onload = () => resolve(img);
+	img.onerror = reject;
 	img.src = src;
-	img.onload = () => {
-		console.log('Image loaded');
-		resolve(img);
-	}
-	img.onerror = err => {
-		console.error(err);
-		reject(err);
-	};
 });
 
 getImg('demo/img/biking.jpg').then(img => console.log('img', img));
