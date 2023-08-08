@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/haroldo-ok/RgbQuant-SMS.js/issues"
   },
-  "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme"
+  "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme",
+  "dependencies": {
+    "canvas": "^2.11.2"
+  }
 }
