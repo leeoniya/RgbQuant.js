@@ -5,6 +5,9 @@
 * RgbQuant-SMS.js - an image quantization lib for Sega Master System
 */
 (function(){
+	
+	const RgbQuant = this.RgbQuant || require('./rgbquant').RgbQuant;
+	const _ = this._ || require('../demo/js/underscore-min');
 
 	/**
 	 * The quantizer itself
