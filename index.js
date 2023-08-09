@@ -8,7 +8,6 @@ const { RgbQuantSMS } = require('./src/rgbquant-sms');
 console.log('Canvas', Canvas);
 
 (async () => {
-	while (true) { // FIXME: Debug
 	
 	const quant = new RgbQuantSMS({
 		colors: 16,
@@ -22,8 +21,9 @@ console.log('Canvas', Canvas);
 		const img = new Image();
 		img.onload = () => {			
 			const canvas = new Canvas.Canvas(img.width, img.height);
-			const ctx = canvas.getContext('2d');
-			ctx.drawImage(img, 0, 0, img.width, img.height);			
+			const ctx = canvas.getContext('2d');			
+			ctx.drawImage(img, 0, 0, img.width, img.height);
+			canvas._typeWorkaround = 'Canvas';
 			resolve(canvas);
 		}
 		img.onerror = reject;
@@ -34,10 +34,7 @@ console.log('Canvas', Canvas);
 	console.log('canvas', canvas);
 	
 	quant.sample(canvas);
-	debugger;
 	const palettes = quant.palettes();
 	console.log('palettes', palettes)
-	console.log('palettes 0', palettes[0])
 	
-	} FIXME: Debug
 })();
