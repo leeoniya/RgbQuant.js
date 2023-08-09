@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('fs');
+const _ = require('underscore');
 
 const Canvas = require('canvas');
 const Image = Canvas.Image;
@@ -134,16 +135,9 @@ if (require.main === module) {
 		.help()
 		.argv;
 		
-	console.log('commandLine', commandLine);
-	
 	if (commandLine._.includes('convert')) {
-		convert(commandLine.src, commandLine.dest, {
-			colors: 16,
-			paletteCount: 1,
-			maxTiles: 256,
-			minHueCols: 0,
-			weighPopularity: true
-		});
+		const options = _.pick(commandLine, 'colors', 'maxTiles', 'minHueCols', 'dithKern', 'dithSerp', 'weighPopularity', 'weighEntropy');
+		convert(commandLine.src, commandLine.dest, options);
 	}
 }
 

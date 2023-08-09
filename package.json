@@ -18,6 +18,7 @@
   "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme",
   "dependencies": {
     "canvas": "^2.11.2",
+    "underscore": "^1.13.6",
     "yargs": "^17.7.2"
   }
 }
