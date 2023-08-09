@@ -22,15 +22,8 @@ const commandLine = yargs.scriptName('rgbquant-sms')
 	
 console.log('commandLine', commandLine);
 
-(async () => {
-	
-	const quant = new RgbQuantSMS({
-		colors: 16,
-		paletteCount: 1,
-		maxTiles: 256,
-		minHueCols: 0,
-		weighPopularity: true
-	});
+const convert = async (src, options) => {
+	const quant = new RgbQuantSMS(options);
 
 	const getCanvas = async (src) => new Promise((resolve, reject) => {
 		const img = new Image();
@@ -45,9 +38,18 @@ console.log('commandLine', commandLine);
 		img.src = src;
 	});
 
-	const canvas = await getCanvas('demo/img/biking.jpg');
+	const canvas = await getCanvas(src);
 	
 	const reducedTileMap = quant.convert(canvas);
-	
-	//console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
+	console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
+}
+
+(async () => {
+	convert('demo/img/biking.jpg', {
+		colors: 16,
+		paletteCount: 1,
+		maxTiles: 256,
+		minHueCols: 0,
+		weighPopularity: true
+	});	
 })();
