@@ -80,14 +80,54 @@ if (require.main === module) {
 	const commandLine = yargs.scriptName('rgbquant-sms')
 		.usage('$0 <cmd> [args]')
 		.command('convert <src> <dest>', 'Converts an image into a png with the tile count reduced', (yargs) => {
-			yargs.positional('src', {
-				type: 'string',
-				describe: 'The source image, the one that will be converted'
-			});
-			yargs.positional('dest', {
-				type: 'string',
-				describe: 'The destination image that will be generated'
-			});
+			yargs
+				.positional('src', {
+					type: 'string',
+					describe: 'The source image, the one that will be converted'
+				})
+				.positional('dest', {
+					type: 'string',
+					describe: 'The destination image that will be generated'
+				})
+				.options({
+					'colors': {
+						default: 16,
+						describe: 'Desired palette size',
+						type: 'integer'
+					},
+					'max-tiles': {
+						default: 256,
+						describe: 'Maximum number of tiles to use',
+						type: 'integer'
+					},
+					'min-hue-cols': {
+						default: 512,
+						describe: 'Number of colors per hue group to evaluate regardless of counts, to retain low-count hues',
+						type: 'integer'
+					},
+					'dithKern': {
+						default: '',
+						describe: 'Dithering kernel name; can one of these:\n' +
+								'FloydSteinberg, Stucki, Atkinson, Jarvis, Burkes, Sierra, TwoSierra, SierraLite, ' +
+								'FalseFloydSteinberg, Ordered2, Ordered2x1, Ordered3, Ordered4 or Ordered8',
+						type: 'string'
+					},
+					'dith-serp': {
+						default: false,
+						describe: 'Enable serpentine pattern dithering',
+						type: 'boolean'
+					},
+					'weigh-popularity': {
+						default: true,
+						describe: 'Weigh by popularity when reducing tile count',
+						type: 'boolean'
+					},
+					'weigh-entropy': {
+						default: false,
+						describe: 'Weigh by entropy when reducing tile count',
+						type: 'boolean'
+					}					
+				});
 		})
 		.demandCommand(1, 'You need to inform at least one command before moving on')
 		.strict()
