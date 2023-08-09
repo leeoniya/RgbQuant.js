@@ -7,6 +7,7 @@ const Image = Canvas.Image;
 
 const { RgbQuantSMS } = require('./src/rgbquant-sms');
 
+// From `helpers.js`
 function drawPixels(idxi8, width0, width1) {
 	var idxi32 = new Uint32Array(idxi8.buffer);
 
@@ -35,6 +36,7 @@ function drawPixels(idxi8, width0, width1) {
 	return can2;
 }
 
+// From `demo.js`
 const tileMapToCanvas = tileMap => {
 	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, tileMap.palettes);
 	image.drawMap(tileMap);
@@ -42,7 +44,7 @@ const tileMapToCanvas = tileMap => {
 	return ican;
 }
 
-const convert = async (src, options) => {
+const convert = async (src, dest, options) => {
 	const quant = new RgbQuantSMS(options);
 
 	const getCanvas = async (src) => new Promise((resolve, reject) => {
@@ -57,17 +59,18 @@ const convert = async (src, options) => {
 		img.onerror = reject;
 		img.src = src;
 	});
+	
+	const saveToFile = (fileName, tileMap) => {
+		const outCanvas = tileMapToCanvas(tileMap);	
+		const buffer = outCanvas.toBuffer('image/png');
+		fs.writeFileSync(fileName, buffer);
+	}
 
 	const canvas = await getCanvas(src);
 	
 	const reducedTileMap = quant.convert(canvas);
-	console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
-	
-	const outCanvas = tileMapToCanvas(reducedTileMap);
-	console.log('outCanvas', outCanvas);
-	
-	const buffer = outCanvas.toBuffer('image/png');
-	fs.writeFileSync('./image.png', buffer);
+
+	saveToFile(dest, reducedTileMap);
 }
 
 /* if called directly from command line or from a shell script */
@@ -76,10 +79,14 @@ if (require.main === module) {
 
 	const commandLine = yargs.scriptName('rgbquant-sms')
 		.usage('$0 <cmd> [args]')
-		.command('convert <src>', 'Converts an image into a png with the tile count reduced', (yargs) => {
+		.command('convert <src> <dest>', 'Converts an image into a png with the tile count reduced', (yargs) => {
 			yargs.positional('src', {
 				type: 'string',
 				describe: 'The source image, the one that will be converted'
+			});
+			yargs.positional('dest', {
+				type: 'string',
+				describe: 'The destination image that will be generated'
 			});
 		})
 		.demandCommand(1, 'You need to inform at least one command before moving on')
@@ -90,7 +97,7 @@ if (require.main === module) {
 	console.log('commandLine', commandLine);
 	
 	if (commandLine._.includes('convert')) {
-		convert(commandLine.src, {
+		convert(commandLine.src, commandLine.dest, {
 			colors: 16,
 			paletteCount: 1,
 			maxTiles: 256,
