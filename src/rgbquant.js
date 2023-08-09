@@ -864,6 +864,9 @@
 	}
 
 	function typeOf(val) {
+		if (val && val._typeWorkaround) {
+			return val._typeWorkaround;
+		}
 		return Object.prototype.toString.call(val).slice(8,-1);
 	}
 
@@ -916,6 +919,7 @@
 				can.height = img.naturalHeight;
 				ctx = can.getContext("2d");
 				ctx.drawImage(img,0,0);
+			case "Canvas":
 			case "HTMLCanvasElement":
 				can = can || img;
 				ctx = ctx || can.getContext("2d");
