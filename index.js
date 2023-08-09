@@ -5,6 +5,41 @@ const Image = Canvas.Image;
 
 const { RgbQuantSMS } = require('./src/rgbquant-sms');
 
+function drawPixels(idxi8, width0, width1) {
+	var idxi32 = new Uint32Array(idxi8.buffer);
+
+	width1 = width1 || width0;
+
+	const canvasWidth = width0;
+	const canvasHeight = Math.ceil(idxi32.length / width0);
+
+	var can = new Canvas.Canvas(canvasWidth, canvasHeight),
+		can2 = new Canvas.Canvas(canvasWidth, canvasHeight),
+		ctx = can.getContext("2d"),
+		ctx2 = can2.getContext("2d");
+
+	ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.webkitImageSmoothingEnabled = ctx.msImageSmoothingEnabled = false;
+	ctx2.imageSmoothingEnabled = ctx2.mozImageSmoothingEnabled = ctx2.webkitImageSmoothingEnabled = ctx2.msImageSmoothingEnabled = false;
+
+	var imgd = ctx.createImageData(can.width, can.height);
+
+	var buf32 = new Uint32Array(imgd.data.buffer);
+	buf32.set(idxi32);
+
+	ctx.putImageData(imgd, 0, 0);
+
+	ctx2.drawImage(can, 0, 0, can2.width, can2.height);
+
+	return can2;
+}
+
+const tileMapToCanvas = tileMap => {
+	var image = new RgbQuantSMS.IndexedImage(tileMap.mapW * 8, tileMap.mapH * 8, tileMap.palettes);
+	image.drawMap(tileMap);
+	var	ican = drawPixels(image.toRgbBytes(), image.width);
+	return ican;
+}
+
 const convert = async (src, options) => {
 	const quant = new RgbQuantSMS(options);
 
@@ -25,6 +60,9 @@ const convert = async (src, options) => {
 	
 	const reducedTileMap = quant.convert(canvas);
 	console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
+	
+	const outCanvas = tileMapToCanvas(reducedTileMap);
+	console.log('outCanvas', outCanvas);
 }
 
 /* if called directly from command line or from a shell script */
