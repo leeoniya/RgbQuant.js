@@ -36,5 +36,12 @@ console.log('Canvas', Canvas);
 	quant.sample(canvas);
 	const palettes = quant.palettes();
 	console.log('palettes', palettes)
+
+	const unoptimizedTileMap = quant.reduceToTileMap(canvas);
+	const optimizedTileMap = quant.normalizeTiles(unoptimizedTileMap);
+	quant.updateTileEntropy(optimizedTileMap.tiles);
+	const similarTiles = quant.groupBySimilarity(optimizedTileMap);
+	const reducedTileMap = quant.removeSimilarTiles(optimizedTileMap, similarTiles);
 	
+	console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
 })();
