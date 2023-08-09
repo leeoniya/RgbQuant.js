@@ -5,8 +5,6 @@ const Image = Canvas.Image;
 
 const { RgbQuantSMS } = require('./src/rgbquant-sms');
 
-console.log('Canvas', Canvas);
-
 (async () => {
 	
 	const quant = new RgbQuantSMS({
@@ -31,11 +29,9 @@ console.log('Canvas', Canvas);
 	});
 
 	const canvas = await getCanvas('demo/img/biking.jpg');
-	console.log('canvas', canvas);
 	
 	quant.sample(canvas);
 	const palettes = quant.palettes();
-	console.log('palettes', palettes)
 
 	const unoptimizedTileMap = quant.reduceToTileMap(canvas);
 	const optimizedTileMap = quant.normalizeTiles(unoptimizedTileMap);
