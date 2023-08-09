@@ -30,14 +30,7 @@ const { RgbQuantSMS } = require('./src/rgbquant-sms');
 
 	const canvas = await getCanvas('demo/img/biking.jpg');
 	
-	quant.sample(canvas);
-	const palettes = quant.palettes();
-
-	const unoptimizedTileMap = quant.reduceToTileMap(canvas);
-	const optimizedTileMap = quant.normalizeTiles(unoptimizedTileMap);
-	quant.updateTileEntropy(optimizedTileMap.tiles);
-	const similarTiles = quant.groupBySimilarity(optimizedTileMap);
-	const reducedTileMap = quant.removeSimilarTiles(optimizedTileMap, similarTiles);
+	const reducedTileMap = quant.convert(canvas);
 	
 	console.log('reducedTileMap', { reducedTileMap, tileCount: reducedTileMap.tiles.length });
 })();
