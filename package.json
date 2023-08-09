@@ -1,6 +1,6 @@
 {
   "name": "rgbquant-sms",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "RgbQuant.js adapted for quantizing images for the Sega Master System hardware",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/haroldo-ok/RgbQuant-SMS.js#readme",
   "dependencies": {
-    "canvas": "^2.11.2"
+    "canvas": "^2.11.2",
+    "underscore": "^1.13.6",
+    "yargs": "^17.7.2"
   }
 }
