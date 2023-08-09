@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+
 const Canvas = require('canvas');
 const Image = Canvas.Image;
 
@@ -63,6 +65,9 @@ const convert = async (src, options) => {
 	
 	const outCanvas = tileMapToCanvas(reducedTileMap);
 	console.log('outCanvas', outCanvas);
+	
+	const buffer = outCanvas.toBuffer('image/png');
+	fs.writeFileSync('./image.png', buffer);
 }
 
 /* if called directly from command line or from a shell script */
