@@ -96,9 +96,13 @@
 				return index[buildKey(histogram)];
 			}).flatten().value();
 			
+			// Free up memory
+			cluster.length = 0;
+			
 			return pixelIndexes;
 		});
 		clusters = null;
+		index = null;
 
 		this.quants = pixelIndexesForClusters.map(function(pixelIndexes){			
 			var pixelValues = pixelIndexes.map(function(pixel){
