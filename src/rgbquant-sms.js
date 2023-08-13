@@ -98,14 +98,16 @@
 			
 			// Free up memory
 			cluster.length = 0;
-			
-			var pixelValues = pixelIndexes.map(function(pixel){
+
+			var pixelValues = new Array(pixelIndexes.length);
+			for (const [i, pixel] of pixelIndexes.entries()) {
 				var rgb = palette[pixel];
-				return (255 << 24)	|		// alpha
+				pixelValues[i] = 
+						(255 << 24)	|		// alpha
 						(rgb[2]  << 16)	|	// blue
 						(rgb[1]  <<  8)	|	// green
-						 rgb[0];					
-			});
+						 rgb[0];									
+			}
 			pixelIndexes = null;
 
 			var uint32pixels = new Uint32Array(pixelValues);
