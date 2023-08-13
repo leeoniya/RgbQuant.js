@@ -90,30 +90,31 @@
 		  }
 		}		
 		
-		const quant = new RgbQuant(self.quantizerOpts);
-		for (const cluster of clusters) {
-			for (const histogram of cluster) {
+		this.quants = clusters.map(function(cluster){
+			var pixelIndexes = _.chain(cluster).map(function(histogram){
 				// Finds the tile corresponding to the cluster element
-				const tilesPixelIndexes = index[buildKey(histogram)];
-				for (const tilePixelIndexes of tilesPixelIndexes) {
-					const flatPixelIndexes = tilePixelIndexes.flat();
-					const uint32pixels = new Uint32Array(flatPixelIndexes.length);
-					for (let i = 0; i < flatPixelIndexes.length; i++) {
-						const rgb = palette[flatPixelIndexes[i]];
-						uint32pixels[i] = (255 << 24)	|		// alpha
-								(rgb[2]  << 16)	|	// blue
-								(rgb[1]  <<  8)	|	// green
-								 rgb[0];					
-					}
-					quant.sample(uint32pixels, 8);
-				}
-			}
+				return index[buildKey(histogram)];
+			}).flatten().value();
 			
 			// Free up memory
 			cluster.length = 0;
-		}
+			
+			var pixelValues = pixelIndexes.map(function(pixel){
+				var rgb = palette[pixel];
+				return (255 << 24)	|		// alpha
+						(rgb[2]  << 16)	|	// blue
+						(rgb[1]  <<  8)	|	// green
+						 rgb[0];					
+			});
+			pixelIndexes = null;
 
-		this.quants = [quant];
+			var uint32pixels = new Uint32Array(pixelValues);
+			pixelValues = null;
+
+			var quant = new RgbQuant(self.quantizerOpts);
+			quant.sample(uint32pixels, 8);
+			return quant;
+		});
 	}
 	
 	/**
