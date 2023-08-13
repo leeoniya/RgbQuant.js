@@ -89,13 +89,18 @@
 			  index[k] = index[k].map(o => o.tile.pixels);
 		  }
 		}		
-
-		this.quants = clusters.map(function(cluster){
+		
+		var pixelIndexesForClusters = clusters.map(function(cluster){
 			var pixelIndexes = _.chain(cluster).map(function(histogram){
 				// Finds the tile corresponding to the cluster element
 				return index[buildKey(histogram)];
 			}).flatten().value();
 			
+			return pixelIndexes;
+		});
+		clusters = null;
+
+		this.quants = pixelIndexesForClusters.map(function(pixelIndexes){			
 			var pixelValues = pixelIndexes.map(function(pixel){
 				var rgb = palette[pixel];
 				return (255 << 24)	|		// alpha
@@ -111,7 +116,7 @@
 			var quant = new RgbQuant(self.quantizerOpts);
 			quant.sample(uint32pixels, 8);
 			return quant;
-		});
+		});		
 	}
 	
 	/**
