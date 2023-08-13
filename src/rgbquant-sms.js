@@ -90,34 +90,30 @@
 		  }
 		}		
 		
-		var pixelIndexesForClusters = clusters.map(function(cluster){
-			var pixelIndexes = _.chain(cluster).map(function(histogram){
+		const quant = new RgbQuant(self.quantizerOpts);
+		for (const cluster of clusters) {
+			for (const histogram of cluster) {
 				// Finds the tile corresponding to the cluster element
-				return index[buildKey(histogram)];
-			}).flatten().value();
+				const tilesPixelIndexes = index[buildKey(histogram)];
+				for (const tilePixelIndexes of tilesPixelIndexes) {
+					const flatPixelIndexes = tilePixelIndexes.flat();
+					const uint32pixels = new Uint32Array(flatPixelIndexes.length);
+					for (let i = 0; i < flatPixelIndexes.length; i++) {
+						const rgb = palette[flatPixelIndexes[i]];
+						uint32pixels[i] = (255 << 24)	|		// alpha
+								(rgb[2]  << 16)	|	// blue
+								(rgb[1]  <<  8)	|	// green
+								 rgb[0];					
+					}
+					quant.sample(uint32pixels, 8);
+				}
+			}
 			
 			// Free up memory
 			cluster.length = 0;
-			
-			return new Uint16Array(pixelIndexes);
-		});
-		clusters = null;
-		index = null;
+		}
 
-		this.quants = pixelIndexesForClusters.map(function(pixelIndexes){			
-			const uint32pixels = new Uint32Array(pixelIndexes.length);
-			for (let i = 0; i < pixelIndexes.length; i++) {
-				const rgb = palette[pixelIndexes[i]];
-				uint32pixels[i] = (255 << 24)	|		// alpha
-						(rgb[2]  << 16)	|	// blue
-						(rgb[1]  <<  8)	|	// green
-						 rgb[0];					
-			}
-						
-			var quant = new RgbQuant(self.quantizerOpts);
-			quant.sample(uint32pixels, 8);
-			return quant;
-		});		
+		this.quants = [quant];
 	}
 	
 	/**
