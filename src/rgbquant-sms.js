@@ -91,10 +91,10 @@
 		}		
 		
 		this.quants = clusters.map(function(cluster){
-			var pixelIndexes = _.chain(cluster).map(function(histogram){
-				// Finds the tile corresponding to the cluster element
+			var pixelIndexes = _.flatten(cluster.map(histogram => {
+				// Finds the tileset corresponding to the cluster element
 				return index[buildKey(histogram)];
-			}).flatten().value();
+			}));
 			
 			// Free up memory
 			cluster.length = 0;
