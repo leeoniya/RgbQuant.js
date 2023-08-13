@@ -106,8 +106,11 @@
 			});
 			pixelIndexes = null;
 			
+			var uint32pixels = new Uint32Array(pixelValues);
+			pixelValues = null;
+			
 			var quant = new RgbQuant(self.quantizerOpts);
-			quant.sample(new Uint32Array(pixelValues), 8);
+			quant.sample(uint32pixels, 8);
 			return quant;
 		});
 	}
