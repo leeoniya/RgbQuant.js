@@ -85,7 +85,7 @@
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
 		for (const k in index) {
 		  if (index.hasOwnProperty(k)) {
-			  index[k] = _.pluck(index[k], 'tile');
+			  index[k] = index[k].map(o => o.tile.pixels);
 		  }
 		}		
 		
@@ -97,7 +97,7 @@
 				return index[buildKey(histogram)];
 			}).flatten().value();
 			
-			var pixelIndexes = _.chain(tiles).pluck('pixels').flatten().value();
+			var pixelIndexes = _.chain(tiles).flatten().value();
 			var pixelValues = pixelIndexes.map(function(pixel){
 				var rgb = palette[pixel];
 				return (255 << 24)	|		// alpha
