@@ -99,24 +99,21 @@
 			// Free up memory
 			cluster.length = 0;
 			
-			return pixelIndexes;
+			return new Uint16Array(pixelIndexes);
 		});
 		clusters = null;
 		index = null;
 
 		this.quants = pixelIndexesForClusters.map(function(pixelIndexes){			
-			var pixelValues = pixelIndexes.map(function(pixel){
-				var rgb = palette[pixel];
-				return (255 << 24)	|		// alpha
+			const uint32pixels = new Uint32Array(pixelIndexes.length);
+			for (let i = 0; i < pixelIndexes.length; i++) {
+				const rgb = palette[pixelIndexes[i]];
+				uint32pixels[i] = (255 << 24)	|		// alpha
 						(rgb[2]  << 16)	|	// blue
 						(rgb[1]  <<  8)	|	// green
 						 rgb[0];					
-			});
-			pixelIndexes = null;
-			
-			var uint32pixels = new Uint32Array(pixelValues);
-			pixelValues = null;
-			
+			}
+						
 			var quant = new RgbQuant(self.quantizerOpts);
 			quant.sample(uint32pixels, 8);
 			return quant;
