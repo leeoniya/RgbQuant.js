@@ -99,19 +99,18 @@
 			// Free up memory
 			cluster.length = 0;
 
-			var pixelValues = new Array(pixelIndexes.length);
-			for (const [i, pixel] of pixelIndexes.entries()) {
-				var rgb = palette[pixel];
-				pixelValues[i] = 
+			// Convert pixel palette indexes into the actual colors
+			const uint32pixels = new Uint32Array(pixelIndexes);
+			for (let i = 0; i < uint32pixels.length; i++) {
+				const pixelIndex = uint32pixels[i];
+				const rgb = palette[pixelIndex];
+				uint32pixels[i] = 
 						(255 << 24)	|		// alpha
 						(rgb[2]  << 16)	|	// blue
 						(rgb[1]  <<  8)	|	// green
 						 rgb[0];									
 			}
 			pixelIndexes = null;
-
-			var uint32pixels = new Uint32Array(pixelValues);
-			pixelValues = null;
 
 			var quant = new RgbQuant(self.quantizerOpts);
 			quant.sample(uint32pixels, 8);
