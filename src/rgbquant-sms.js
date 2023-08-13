@@ -81,14 +81,17 @@
 		function buildKey(histogram) {
 			return Array.prototype.slice.call(histogram).join(',');
 		}
+		
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+		Object.keys(index).forEach(k => index[k] = _.pluck(index[k], 'tile'));
+		
 		// Those arrays can become huge; free it up here.
 		tilesToClusterize = null;
 
 		this.quants = clusters.map(function(cluster){
 			var tiles = _.chain(cluster).map(function(histogram){
 				return index[buildKey(histogram)];
-			}).flatten().pluck('tile').value();
+			}).flatten().value();
 			
 			var pixelIndexes = _.chain(tiles).pluck('pixels').flatten().value();
 			var pixelValues = pixelIndexes.map(function(pixel){
