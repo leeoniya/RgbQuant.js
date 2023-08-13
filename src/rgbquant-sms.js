@@ -83,7 +83,11 @@
 		}
 		
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
-		Object.keys(index).forEach(k => index[k] = _.pluck(index[k], 'tile'));
+		for (const k in index) {
+		  if (index.hasOwnProperty(k)) {
+			  index[k] = _.pluck(index[k], 'tile');
+		  }
+		}		
 		
 		// Those arrays can become huge; free it up here.
 		tilesToClusterize = null;
