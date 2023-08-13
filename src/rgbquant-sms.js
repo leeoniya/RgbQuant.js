@@ -81,8 +81,10 @@
 		function buildKey(histogram) {
 			return Array.prototype.slice.call(histogram).join(',');
 		}
-
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+		// Those arrays can become huge; free it up here.
+		tilesToClusterize = null;
+
 		this.quants = clusters.map(function(cluster){
 			var tiles = _.chain(cluster).map(function(histogram){
 				return index[buildKey(histogram)];
