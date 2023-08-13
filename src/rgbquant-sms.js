@@ -83,17 +83,16 @@
 		}
 		
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+		tilesToClusterize = null;
 		for (const k in index) {
 		  if (index.hasOwnProperty(k)) {
 			  index[k] = index[k].map(o => o.tile.pixels);
 		  }
 		}		
-		
-		// Those arrays can become huge; free it up here.
-		tilesToClusterize = null;
 
 		this.quants = clusters.map(function(cluster){
 			var pixelIndexes = _.chain(cluster).map(function(histogram){
+				// Finds the tile corresponding to the cluster element
 				return index[buildKey(histogram)];
 			}).flatten().value();
 			
