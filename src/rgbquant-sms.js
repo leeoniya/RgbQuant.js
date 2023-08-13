@@ -81,14 +81,30 @@
 		function buildKey(histogram) {
 			return Array.prototype.slice.call(histogram).join(',');
 		}
-
+		
 		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
-		this.quants = clusters.map(function(cluster){
-			var tiles = _.chain(cluster).map(function(histogram){
+		tilesToClusterize = null;
+		for (const k in index) {
+		  if (index.hasOwnProperty(k)) {
+			  index[k] = index[k].map(o => o.tile.pixels);
+		  }
+		}		
+		
+		var pixelIndexesForClusters = clusters.map(function(cluster){
+			var pixelIndexes = _.chain(cluster).map(function(histogram){
+				// Finds the tile corresponding to the cluster element
 				return index[buildKey(histogram)];
-			}).flatten().pluck('tile').value();
+			}).flatten().value();
 			
-			var pixelIndexes = _.chain(tiles).pluck('pixels').flatten().value();
+			// Free up memory
+			cluster.length = 0;
+			
+			return pixelIndexes;
+		});
+		clusters = null;
+		index = null;
+
+		this.quants = pixelIndexesForClusters.map(function(pixelIndexes){			
 			var pixelValues = pixelIndexes.map(function(pixel){
 				var rgb = palette[pixel];
 				return (255 << 24)	|		// alpha
@@ -96,11 +112,15 @@
 						(rgb[1]  <<  8)	|	// green
 						 rgb[0];					
 			});
+			pixelIndexes = null;
+			
+			var uint32pixels = new Uint32Array(pixelValues);
+			pixelValues = null;
 			
 			var quant = new RgbQuant(self.quantizerOpts);
-			quant.sample(new Uint32Array(pixelValues), 8);
+			quant.sample(uint32pixels, 8);
 			return quant;
-		});
+		});		
 	}
 	
 	/**
@@ -617,10 +637,12 @@
 	
 	RgbQuantSMS.prototype.convert = function(img) {
 		this.sample(img);
-		const palettes = this.palettes();
+		this.palettes();
 
-		const unoptimizedTileMap = this.reduceToTileMap(img);
+		let unoptimizedTileMap = this.reduceToTileMap(img);
 		const optimizedTileMap = this.normalizeTiles(unoptimizedTileMap);
+		unoptimizedTileMap = null;
+		
 		this.updateTileEntropy(optimizedTileMap.tiles);
 		const similarTiles = this.groupBySimilarity(optimizedTileMap);
 		const reducedTileMap = this.removeSimilarTiles(optimizedTileMap, similarTiles);
