@@ -104,6 +104,7 @@
 						(rgb[1]  <<  8)	|	// green
 						 rgb[0];					
 			});
+			pixelIndexes = null;
 			
 			var quant = new RgbQuant(self.quantizerOpts);
 			quant.sample(new Uint32Array(pixelValues), 8);
