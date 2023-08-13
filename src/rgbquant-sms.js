@@ -637,10 +637,12 @@
 	
 	RgbQuantSMS.prototype.convert = function(img) {
 		this.sample(img);
-		const palettes = this.palettes();
+		this.palettes();
 
-		const unoptimizedTileMap = this.reduceToTileMap(img);
+		let unoptimizedTileMap = this.reduceToTileMap(img);
 		const optimizedTileMap = this.normalizeTiles(unoptimizedTileMap);
+		unoptimizedTileMap = null;
+		
 		this.updateTileEntropy(optimizedTileMap.tiles);
 		const similarTiles = this.groupBySimilarity(optimizedTileMap);
 		const reducedTileMap = this.removeSimilarTiles(optimizedTileMap, similarTiles);
