@@ -93,11 +93,10 @@
 		tilesToClusterize = null;
 
 		this.quants = clusters.map(function(cluster){
-			var tiles = _.chain(cluster).map(function(histogram){
+			var pixelIndexes = _.chain(cluster).map(function(histogram){
 				return index[buildKey(histogram)];
 			}).flatten().value();
 			
-			var pixelIndexes = _.chain(tiles).flatten().value();
 			var pixelValues = pixelIndexes.map(function(pixel){
 				var rgb = palette[pixel];
 				return (255 << 24)	|		// alpha
