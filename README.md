@@ -13,7 +13,7 @@ TODO:
 - Implement removal of similar, but not necessarily identical, tiles, in order to reduce the amount of tiles to a limit specified by the user: **Done**;
 - Allow the user to upload his/her own image for conversion: **Done**;
 - Allow image resizing: *Not started yet*;
-- Implement command line support: *Not started yet*.
+- Implement command line support: **Done**.
 
 [RgbQuant.js]: https://github.com/leeoniya/RgbQuant.js
 [clusterfck]: https://github.com/harthur/clusterfck
