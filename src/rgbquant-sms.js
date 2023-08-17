@@ -76,52 +76,7 @@
 			});
 		}));		
 
-		// FIXME: Test 2
-		var pixelIndexes = _.flatten(tilesToClusterize.map(o => o.tile.pixels));
-
-		// Convert pixel palette indexes into the actual colors
-		const uint32pixels = new Uint32Array(pixelIndexes);
-		for (let i = 0; i < uint32pixels.length; i++) {
-			const pixelIndex = uint32pixels[i];
-			const rgb = palette[pixelIndex];
-			uint32pixels[i] = 
-					(255 << 24)	|		// alpha
-					(rgb[2]  << 16)	|	// blue
-					(rgb[1]  <<  8)	|	// green
-					 rgb[0];									
-		}
-		pixelIndexes = null;
-
-		var quant = new RgbQuant(self.quantizerOpts);
-		quant.sample(uint32pixels, 8);
-		
-		this.quants = [quant];
-		
-		return;
-		
-		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), this.paletteCount);
-
-		function buildKey(histogram) {
-			return Array.prototype.slice.call(histogram).join(',');
-		}
-		
-		var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
-		tilesToClusterize = null;
-		for (const k in index) {
-		  if (index.hasOwnProperty(k)) {
-			  index[k] = index[k].map(o => o.tile.pixels);
-		  }
-		}		
-		
-		this.quants = clusters.map(function(cluster){
-			var pixelIndexes = _.flatten(cluster.map(histogram => {
-				// Finds the tileset corresponding to the cluster element
-				return index[buildKey(histogram)];
-			}));
-			
-			// Free up memory
-			cluster.length = 0;
-
+		const pixelIndexesToQuant = pixelIndexes => {
 			// Convert pixel palette indexes into the actual colors
 			const uint32pixels = new Uint32Array(pixelIndexes);
 			for (let i = 0; i < uint32pixels.length; i++) {
@@ -135,10 +90,48 @@
 			}
 			pixelIndexes = null;
 
-			var quant = new RgbQuant(self.quantizerOpts);
+			const quant = new RgbQuant(self.quantizerOpts);
 			quant.sample(uint32pixels, 8);
+			
 			return quant;
-		});
+		}
+
+		const quantizeSinglePalette = tilesToClusterize => {
+			var pixelIndexes = _.flatten(tilesToClusterize.map(o => o.tile.pixels));
+			return [pixelIndexesToQuant(pixelIndexes)];
+		}
+		
+		const quantizeMultiPalette = tilesToClusterize => {
+			var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), this.paletteCount);
+
+			function buildKey(histogram) {
+				return Array.prototype.slice.call(histogram).join(',');
+			}
+			
+			var index = _.groupBy(tilesToClusterize, function(data){ return buildKey(data.histogram) });
+			tilesToClusterize = null;
+			for (const k in index) {
+			  if (index.hasOwnProperty(k)) {
+				  index[k] = index[k].map(o => o.tile.pixels);
+			  }
+			}		
+			
+			return clusters.map(function(cluster){
+				var pixelIndexes = _.flatten(cluster.map(histogram => {
+					// Finds the tileset corresponding to the cluster element
+					return index[buildKey(histogram)];
+				}));
+				
+				// Free up memory
+				cluster.length = 0;
+
+				return pixelIndexesToQuant(pixelIndexes);
+			});
+		}
+		
+		this.quants = this.paletteCount > 1 ? 
+			quantizeMultiPalette(tilesToClusterize) :
+			quantizeSinglePalette(tilesToClusterize);
 	}
 	
 	/**
