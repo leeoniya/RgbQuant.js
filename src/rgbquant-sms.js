@@ -75,6 +75,29 @@
 				};
 			});
 		}));		
+
+		// FIXME: Test 2
+		var pixelIndexes = _.flatten(tilesToClusterize.map(o => o.tile.pixels));
+
+		// Convert pixel palette indexes into the actual colors
+		const uint32pixels = new Uint32Array(pixelIndexes);
+		for (let i = 0; i < uint32pixels.length; i++) {
+			const pixelIndex = uint32pixels[i];
+			const rgb = palette[pixelIndex];
+			uint32pixels[i] = 
+					(255 << 24)	|		// alpha
+					(rgb[2]  << 16)	|	// blue
+					(rgb[1]  <<  8)	|	// green
+					 rgb[0];									
+		}
+		pixelIndexes = null;
+
+		var quant = new RgbQuant(self.quantizerOpts);
+		quant.sample(uint32pixels, 8);
+		
+		this.quants = [quant];
+		
+		return;
 		
 		var clusters = clusterfck.kmeans(_.pluck(tilesToClusterize, 'histogram'), this.paletteCount);
 
